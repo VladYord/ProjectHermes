@@ -1,0 +1,64 @@
+server:
+  host: "0.0.0.0"
+  port: 8000
+  auth:
+    enabled: false
+    api_key: "${HERMES_API_KEY}"
+
+llm:
+  default_provider: "ollama"
+  providers:
+    ollama:
+      base_url: "http://localhost:11434"
+      model: "llama3.1"
+      embedding_model: "nomic-embed-text"
+    openai:
+      api_key: "${OPENAI_API_KEY}"
+      model: "gpt-4o"
+    gemini:
+      api_key: "${GEMINI_API_KEY}"
+      model: "gemini-pro"
+    azure_openai:
+      api_key: "${AZURE_OPENAI_API_KEY}"
+      base_url: "https://YOUR_AZURE_OPENAI_ENDPOINT"
+      deployment: "gpt-4o-mini"
+      api_version: "2024-08-01-preview"
+      embedding_deployment: "text-embedding-3-small"
+
+vectordb:
+  provider: "chromadb"
+  persist_directory: "./data/chromadb"
+  # Embedding provider: "hash" (offline/default), "ollama", "azure_openai"
+  embedding_provider: "hash"
+
+ingestion:
+  chunk_size: 1000
+  chunk_overlap: 200
+  supported_extensions:
+    - ".pdf"
+    - ".txt"
+    - ".md"
+    - ".docx"
+    - ".py"
+    - ".js"
+    - ".ts"
+    - ".java"
+    - ".c"
+    - ".cpp"
+    - ".h"
+    - ".cs"
+    - ".go"
+    - ".rs"
+    - ".png"
+    - ".jpg"
+    - ".jpeg"
+    - ".tiff"
+    - ".bmp"
+
+ocr:
+  engine: "tesseract"
+  language: "eng"
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"

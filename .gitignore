@@ -151,6 +151,7 @@ activemq-data/
 .env
 .envrc
 .venv
+.venv/
 env/
 venv/
 ENV/
@@ -186,7 +187,7 @@ cython_debug/
 #   be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
 #   and can be added to the global gitignore or merged into this file.  For a more nuclear
 #   option (not recommended) you can uncomment the following to ignore the entire idea folder.
-# .idea/
+.idea/
 
 # Abstra
 #   Abstra is an AI-powered process automation framework.
@@ -199,9 +200,13 @@ cython_debug/
 #   that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
 #   and can be added to the global gitignore or merged into this file. However, if you prefer, 
 #   you could uncomment the following to ignore the entire vscode folder
-# .vscode/
+.vscode/
 # Temporary file for partial code execution
 tempCodeRunnerFile.py
+
+*.swp
+*.swo
+.obsidian/
 
 # Ruff stuff:
 .ruff_cache/
@@ -216,3 +221,38 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Runtime data
+data/
+*.db
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Test
+.pytest_cache/
+htmlcov/
+.coverage
+
+diagrams/
+doc/
+
+# Tauri build outputs
+src-tauri/target/
+
+# Svelte / Vite build
+ui/dist/
+ui/node_modules/
+
+# PyInstaller build output
+build/pyinstaller/
+src-tauri/resources/hermes-server*
+
+# Tesseract platform binaries (populated by CI)
+packaging/tesseract/win/
+packaging/tesseract/mac/
+packaging/tesseract/linux/
+
+ui/dist-ssr/
+ui/*.local

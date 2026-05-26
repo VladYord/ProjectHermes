@@ -1,0 +1,17 @@
+This is a sample text file for testing the Hermes document ingestion pipeline.
+
+It contains multiple paragraphs with different topics to test chunking.
+
+The first topic is about Python programming. Python is a versatile language
+used for web development, data science, machine learning, and automation.
+It has a clean syntax that emphasizes readability.
+
+The second topic is about vector databases. Vector databases store data as
+high-dimensional vectors, enabling similarity search. ChromaDB is an
+open-source embedding database that makes it easy to build AI applications
+with embeddings.
+
+The third topic is about Retrieval-Augmented Generation (RAG). RAG combines
+information retrieval with text generation. When a user asks a question,
+the system first retrieves relevant documents from a knowledge base, then
+uses an LLM to generate an answer based on the retrieved context.
