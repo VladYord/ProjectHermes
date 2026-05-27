@@ -1,6 +1,7 @@
 <script lang="ts">
   import ChatSidebar from './ChatSidebar.svelte';
   import ChatWindow from './ChatWindow.svelte';
+  import DocumentManager from './DocumentManager.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
 </script>
 
@@ -8,6 +9,9 @@
   <ChatSidebar />
   <ChatWindow />
 </div>
+
+<!-- DocumentManager renders as a fixed overlay — outside the grid -->
+<DocumentManager />
 
 <style>
   .layout {
