@@ -9,6 +9,8 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+# Ignore build folders anywhere
+**/build/
 develop-eggs/
 dist/
 downloads/
@@ -256,3 +258,7 @@ packaging/tesseract/linux/
 
 ui/dist-ssr/
 ui/*.local
+
+# Re-allow src/lib
+!ui/src/lib/
+!ui/src/lib/**
