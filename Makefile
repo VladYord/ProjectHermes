@@ -23,6 +23,9 @@ clean:
 # ── Desktop App Targets ──────────────────────────────────────────────────────
 
 ## Start Tauri dev window (Svelte HMR + Tauri shell)
+test:
+	.venv\Scripts\python.exe -m pytest tests/ -q
+
 dev:
 	cargo tauri dev
 

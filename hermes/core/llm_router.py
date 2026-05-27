@@ -28,35 +28,44 @@ class LLMRouter:
 
     @staticmethod
     def _build_ollama() -> BaseChatModel:
-        from langchain_ollama import ChatOllama
+        from langchain_litellm import ChatLiteLLM
 
         cfg = get_config().llm.providers.ollama
-        logger.info("Initializing Ollama provider (model=%s, url=%s)", cfg.model, cfg.base_url)
-        return ChatOllama(model=cfg.model, base_url=cfg.base_url)
+        logger.info("Initializing Ollama provider via LiteLLM (model=%s, url=%s)", cfg.model, cfg.base_url)
+        return ChatLiteLLM(
+            model=f"ollama/{cfg.model}",
+            api_base=cfg.base_url,
+        )
 
     @staticmethod
     def _build_openai() -> BaseChatModel:
-        from langchain_openai import ChatOpenAI
+        from langchain_litellm import ChatLiteLLM
 
         cfg = get_config().llm.providers.openai
         if not cfg.api_key:
             raise ValueError("OpenAI API key not configured (llm.providers.openai.api_key)")
-        logger.info("Initializing OpenAI provider (model=%s)", cfg.model)
-        return ChatOpenAI(model=cfg.model, api_key=cfg.api_key)
+        logger.info("Initializing OpenAI provider via LiteLLM (model=%s)", cfg.model)
+        return ChatLiteLLM(
+            model=f"openai/{cfg.model}",
+            api_key=cfg.api_key,
+        )
 
     @staticmethod
     def _build_gemini() -> BaseChatModel:
-        from langchain_google_genai import ChatGoogleGenerativeAI
+        from langchain_litellm import ChatLiteLLM
 
         cfg = get_config().llm.providers.gemini
         if not cfg.api_key:
             raise ValueError("Gemini API key not configured (llm.providers.gemini.api_key)")
-        logger.info("Initializing Gemini provider (model=%s)", cfg.model)
-        return ChatGoogleGenerativeAI(model=cfg.model, google_api_key=cfg.api_key)
+        logger.info("Initializing Gemini provider via LiteLLM (model=%s)", cfg.model)
+        return ChatLiteLLM(
+            model=f"gemini/{cfg.model}",
+            api_key=cfg.api_key,
+        )
 
     @staticmethod
     def _build_azure_openai() -> BaseChatModel:
-        from langchain_openai import AzureChatOpenAI
+        from langchain_litellm import ChatLiteLLM
 
         cfg = get_config().llm.providers.azure_openai
         if not cfg.api_key:
@@ -65,14 +74,14 @@ class LLMRouter:
                 "(llm.providers.azure_openai.api_key or AZURE_OPENAI_API_KEY env var)"
             )
         logger.info(
-            "Initializing Azure OpenAI provider (deployment=%s, url=%s)",
+            "Initializing Azure OpenAI provider via LiteLLM (deployment=%s, url=%s)",
             cfg.deployment, cfg.base_url,
         )
-        return AzureChatOpenAI(
-            azure_endpoint=cfg.base_url,
-            azure_deployment=cfg.deployment,
-            api_version=cfg.api_version,
+        return ChatLiteLLM(
+            model=f"azure/{cfg.deployment}",
+            api_base=cfg.base_url,
             api_key=cfg.api_key,
+            api_version=cfg.api_version,
         )
 
     _BUILDERS: dict[str, str] = {

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -64,11 +66,39 @@ class HealthResponse(BaseModel):
 class ProviderInfo(BaseModel):
     name: str
     available: bool
+    reachable: bool | None = None
+    latency_ms: int | None = None
+    api_key_set: bool = False
+    model: str | None = None
 
 
 class ProvidersResponse(BaseModel):
     default: str
     providers: list[ProviderInfo]
+
+
+# --- Config ---
+
+class ProviderConfigPatch(BaseModel):
+    api_key: str | None = None
+    model: str | None = None
+    base_url: str | None = None
+    deployment: str | None = None
+    api_version: str | None = None
+    embedding_deployment: str | None = None
+    embedding_model: str | None = None
+
+
+class ConfigPatchRequest(BaseModel):
+    default_provider: str | None = None
+    embedding_provider: str | None = None
+    providers: dict[str, ProviderConfigPatch] | None = None
+
+
+class ConfigResponse(BaseModel):
+    default_provider: str
+    embedding_provider: str
+    providers: dict[str, Any]
 
 
 # --- Sessions ---

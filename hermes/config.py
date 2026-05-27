@@ -146,16 +146,25 @@ def load_config(config_path: Optional[str | Path] = None) -> HermesConfig:
     """Load configuration from YAML file with env var expansion.
 
     Falls back to defaults if no config file is found.
+    When ``HERMES_PACKAGED=1`` is set the vector store and session paths are
+    redirected to the OS app-data directory so data survives app updates.
     """
     path = find_config_file(config_path)
     if path is None:
-        return HermesConfig()
+        config = HermesConfig()
+    else:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = yaml.safe_load(f) or {}
+        expanded = _expand_env_recursive(raw)
+        config = HermesConfig.model_validate(expanded)
 
-    with open(path, "r", encoding="utf-8") as f:
-        raw = yaml.safe_load(f) or {}
+    # Override data paths when running as a packaged desktop app.
+    if os.environ.get("HERMES_PACKAGED") == "1":
+        from hermes.config_manager import get_app_data_dir
+        app_data = get_app_data_dir()
+        config.vectordb.persist_directory = str(app_data / "chromadb")
 
-    expanded = _expand_env_recursive(raw)
-    return HermesConfig.model_validate(expanded)
+    return config
 
 
 # --- Singleton-ish access ---

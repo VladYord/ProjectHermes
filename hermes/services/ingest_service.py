@@ -17,9 +17,10 @@ class IngestService:
     def __init__(self, knowledge: KnowledgeService) -> None:
         self._knowledge = knowledge
 
-    def ingest_file(self, file_path: str | Path) -> IngestResult:
+    def ingest_file(self, file_path: str | Path, document_name: str | None = None) -> IngestResult:
         """Ingest a file into the knowledge base."""
         path = Path(file_path)
         if not path.is_file():
             raise FileNotFoundError(f"File not found: {path}")
-        return self._knowledge.ingest_file(path)
+        return self._knowledge.ingest_file(path, document_name=document_name)
+
