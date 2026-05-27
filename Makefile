@@ -39,8 +39,8 @@ endif
 build-ui:
 	cd ui && npm run build
 
-## Build full Tauri installer (run bundle-backend first for production)
-build-app: build-ui
+## Build full Tauri installer (beforeBuildCommand in tauri.conf.json builds the frontend)
+build-app:
 	cargo tauri build
 
 ## Run PyInstaller to produce hermes-server binary (renames to include target triple)

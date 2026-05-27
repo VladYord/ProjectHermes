@@ -91,6 +91,8 @@ try {
     $SizeMB = [math]::Round((Get-Item $DestExe).Length / 1MB, 1)
     Write-Host "Binary size  : ${SizeMB} MB"
 
+    exit 0
+
 } finally {
     Pop-Location
 }

@@ -1,0 +1,169 @@
+name: Build & Release
+
+# Triggered by version tags (v*) or manually for testing.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # required to create GitHub Releases and upload assets
+
+jobs:
+  # ── Per-platform build ──────────────────────────────────────────────────────
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_glob: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            artifact_glob: src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            # Newline-separated globs — upload-artifact supports multiple patterns
+            artifact_glob: |
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Python 3.12 ──────────────────────────────────────────────────────
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install Python dependencies
+        run: pip install -e ".[dev]" pyinstaller
+
+      # ── Tesseract OCR (platform-specific) ───────────────────────────────
+      - name: Install Tesseract (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: choco install tesseract --yes
+
+      - name: Install Tesseract (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: brew install tesseract
+
+      - name: Install Tesseract (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-eng
+
+      # Copy Tesseract binaries into packaging/ so the spec file can bundle them
+      - name: Bundle Tesseract (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path packaging\tesseract\win   | Out-Null
+          New-Item -ItemType Directory -Force -Path packaging\tesseract\tessdata | Out-Null
+          Copy-Item "C:\Program Files\Tesseract-OCR\tesseract.exe"                  packaging\tesseract\win\
+          Copy-Item "C:\Program Files\Tesseract-OCR\tessdata\eng.traineddata"       packaging\tesseract\tessdata\
+
+      - name: Bundle Tesseract (macOS)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          mkdir -p packaging/tesseract/mac packaging/tesseract/tessdata
+          cp "$(which tesseract)" packaging/tesseract/mac/
+          cp /usr/local/share/tessdata/eng.traineddata packaging/tesseract/tessdata/ 2>/dev/null \
+          || cp /opt/homebrew/share/tessdata/eng.traineddata packaging/tesseract/tessdata/
+
+      - name: Bundle Tesseract (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          mkdir -p packaging/tesseract/linux packaging/tesseract/tessdata
+          cp "$(which tesseract)" packaging/tesseract/linux/
+          cp /usr/share/tesseract-ocr/5/tessdata/eng.traineddata packaging/tesseract/tessdata/ 2>/dev/null \
+          || cp /usr/share/tesseract-ocr/4/tessdata/eng.traineddata packaging/tesseract/tessdata/
+
+      # ── Build hermes-server sidecar (PyInstaller) ────────────────────────
+      - name: Build hermes-server (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        # Use system python — venv not present in CI; pip installed into actions python
+        run: .\packaging\scripts\build-backend.ps1 -VenvPython python
+
+      - name: Build hermes-server (Unix)
+        if: matrix.platform != 'windows-latest'
+        run: bash packaging/scripts/build-backend.sh
+
+      # ── Node.js 20 ────────────────────────────────────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ui
+        run: npm ci
+
+      # ── Rust (stable + target triple) ────────────────────────────────────
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+
+      # Cache compiled Rust crates (cuts ~40% off subsequent build times)
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      # ── Linux WebKit2GTK (required by Tauri) ─────────────────────────────
+      - name: Install WebKit2GTK (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      # ── Tauri CLI (pre-built npm binary — faster than cargo install) ──────
+      - name: Install Tauri CLI
+        run: npm install -g @tauri-apps/cli@^2
+
+      # ── Build Tauri app ───────────────────────────────────────────────────
+      # beforeBuildCommand in tauri.conf.json ("npm --prefix ui run build")
+      # builds the Svelte frontend automatically before the Rust compilation.
+      - name: Build Tauri app
+        run: tauri build --target ${{ matrix.target }}
+
+      # ── Upload installer as workflow artifact ─────────────────────────────
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermes-${{ matrix.target }}
+          path: ${{ matrix.artifact_glob }}
+          if-no-files-found: error
+
+  # ── Create GitHub Release (tag builds only) ─────────────────────────────────
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all installer artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: artifacts/**
