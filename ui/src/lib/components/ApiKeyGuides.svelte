@@ -21,8 +21,13 @@
   ];
 
   function openLink(url: string) {
-    // Phase 5: replace with Tauri shell.open(url)
-    window.open(url, '_blank', 'noopener,noreferrer');
+    if ((window as { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__) {
+      // Production: open in system default browser via Tauri shell plugin
+      import('@tauri-apps/plugin-shell').then(({ open }) => open(url));
+    } else {
+      // Dev mode: standard browser open
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   }
 </script>
 

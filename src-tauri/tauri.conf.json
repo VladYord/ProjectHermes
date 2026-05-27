@@ -35,6 +35,19 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "externalBin": ["resources/hermes-server"]
+  },
+  "plugins": {
+    "shell": {
+      "open": "https?://.*",
+      "scope": [
+        {
+          "name": "resources/hermes-server",
+          "sidecar": true,
+          "args": true
+        }
+      ]
+    }
   }
 }

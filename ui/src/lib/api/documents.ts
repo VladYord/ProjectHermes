@@ -1,4 +1,5 @@
-import { BASE_URL, apiFetch } from './client';
+import { apiBase } from '$lib/backend.svelte';
+import { apiFetch } from './client';
 
 /** Matches backend `DocumentInfo` schema. */
 export interface DocumentInfo {
@@ -26,7 +27,7 @@ export async function uploadDocument(file: File): Promise<IngestResponse> {
   const form = new FormData();
   form.append('file', file, file.name);
 
-  const res = await fetch(`${BASE_URL}/api/ingest/upload`, {
+  const res = await fetch(`${apiBase()}/api/ingest/upload`, {
     method: 'POST',
     body: form,
     // Do NOT set Content-Type — let the browser set it with the boundary
@@ -40,4 +41,16 @@ export async function uploadDocument(file: File): Promise<IngestResponse> {
 
 export function deleteDocument(id: string): Promise<unknown> {
   return apiFetch(`/api/documents/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/**
+ * Ingest a document by its file-system path.
+ * Used in Tauri production mode where the native file dialog returns a path,
+ * not file bytes. The Python sidecar reads the file directly.
+ */
+export function ingestByPath(filePath: string): Promise<IngestResponse> {
+  return apiFetch('/api/ingest', {
+    method: 'POST',
+    body: JSON.stringify({ file_path: filePath }),
+  });
 }

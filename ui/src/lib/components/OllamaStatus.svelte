@@ -3,6 +3,15 @@
 
   const status = $derived(configStore.providers.find((p) => p.name === 'ollama'));
   const reachable = $derived(status?.reachable ?? null);
+
+  function openSetupGuide() {
+    const url = 'https://ollama.com/download';
+    if ((window as { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__) {
+      import('@tauri-apps/plugin-shell').then(({ open }) => open(url));
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  }
 </script>
 
 <div class="ollama-status">
@@ -15,12 +24,7 @@
   {:else if reachable === false}
     <span class="dot red">●</span>
     <span class="label">Not running</span>
-    <a
-      href="https://ollama.com/download"
-      target="_blank"
-      rel="noopener noreferrer"
-      class="setup-link"
-    >Setup Guide ↗</a>
+    <button class="setup-link" onclick={openSetupGuide}>Setup Guide ↗</button>
   {:else}
     <span class="dot yellow">●</span>
     <span class="label">Checking…</span>

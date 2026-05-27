@@ -1,4 +1,4 @@
-import { BASE_URL } from './client';
+import { apiBase } from '$lib/backend.svelte';
 
 export interface ChatChunk {
   type: 'text' | 'done' | 'error';
@@ -17,7 +17,7 @@ export async function* streamChat(
 ): AsyncGenerator<ChatChunk> {
   let res: Response;
   try {
-    res = await fetch(`${BASE_URL}/api/chat`, {
+    res = await fetch(`${apiBase()}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

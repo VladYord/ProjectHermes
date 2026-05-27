@@ -1,20 +1,45 @@
 <script lang="ts">
   import { docStore } from '$lib/stores/documents.svelte';
 
-  const ACCEPT =
-    '.pdf,.txt,.md,.docx,.py,.js,.ts,.jsx,.tsx,.java,.c,.cpp,.h,.cs,.go,.rs,' +
-    '.png,.jpg,.jpeg,.tiff,.bmp';
+  const EXTENSIONS = [
+    'pdf', 'txt', 'md', 'docx',
+    'py', 'js', 'ts', 'jsx', 'tsx', 'java', 'c', 'cpp', 'h', 'cs', 'go', 'rs',
+    'png', 'jpg', 'jpeg', 'tiff', 'bmp',
+  ];
+
+  const ACCEPT = EXTENSIONS.map((e) => `.${e}`).join(',');
 
   let inputEl = $state<HTMLInputElement | null>(null);
 
-  function openPicker() {
-    inputEl?.click();
+  function isTauri(): boolean {
+    return Boolean((window as { __TAURI_INTERNALS__?: object }).__TAURI_INTERNALS__);
+  }
+
+  async function openPicker() {
+    if (isTauri()) {
+      await openTauriDialog();
+    } else {
+      inputEl?.click();
+    }
+  }
+
+  async function openTauriDialog() {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    const result = await open({
+      multiple: true,
+      filters: [{ name: 'Supported Documents', extensions: EXTENSIONS }],
+    });
+    if (!result) return;
+    const paths = Array.isArray(result) ? result : [result];
+    for (const path of paths) {
+      await docStore.ingestByPath(path);
+    }
   }
 
   async function onFilesSelected(e: Event) {
     const input = e.target as HTMLInputElement;
     const files = Array.from(input.files ?? []);
-    input.value = ''; // Reset so same file can be re-selected
+    input.value = '';
     for (const file of files) {
       await docStore.uploadAndIngest(file);
     }

@@ -1,5 +1,6 @@
 import {
   deleteDocument as apiDelete,
+  ingestByPath as apiIngestByPath,
   listDocuments as apiList,
   uploadDocument as apiUpload,
   type DocumentInfo,
@@ -90,6 +91,33 @@ class DocumentsStore {
       this.pollTimer = null;
     }
     this.uploadState = { active: false, filename: '', progress: 'done' };
+  }
+
+  /**
+   * Ingest a file by its native filesystem path (Tauri production mode).
+   * Called after Tauri dialog.open() returns a path string.
+   */
+  async ingestByPath(filePath: string): Promise<void> {
+    const filename = filePath.replace(/\\/g, '/').split('/').pop() ?? filePath;
+    this.uploadState = { active: true, filename, progress: 'uploading' };
+    try {
+      const result = await apiIngestByPath(filePath);
+      await this.refreshDocuments();
+      this.uploadState = {
+        active: true,
+        filename,
+        progress: 'done',
+        chunksCreated: result.chunks_created,
+      };
+      setTimeout(() => {
+        if (this.uploadState.progress === 'done') {
+          this.uploadState = { active: false, filename: '', progress: 'done' };
+        }
+      }, 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.uploadState = { active: true, filename, progress: 'error', error: msg };
+    }
   }
 }
 
