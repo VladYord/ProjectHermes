@@ -44,6 +44,37 @@ if TESSDATA_DIR.exists():
     datas += [(str(TESSDATA_DIR), 'tessdata')]
 
 # ---------------------------------------------------------------------------
+# collect_all() — must be called explicitly; it is NOT a valid Analysis() kwarg.
+# Collects every submodule, data file, and binary from the named package so
+# that dynamic string-based imports (e.g. chromadb.telemetry.product.posthog)
+# are found at runtime inside the frozen bundle.
+# ---------------------------------------------------------------------------
+from PyInstaller.utils.hooks import collect_all
+
+extra_hiddenimports = []
+
+for _pkg in [
+    'chromadb',
+    'onnxruntime',
+    'langchain',
+    'langchain_core',
+    'langchain_community',
+    'langchain_ollama',
+    'langchain_openai',
+    'langchain_google_genai',
+    'langchain_litellm',
+    'litellm',
+    'posthog',          # chromadb telemetry back-end
+]:
+    try:
+        _d, _b, _h = collect_all(_pkg)
+        datas    += _d
+        binaries += _b
+        extra_hiddenimports += _h
+    except Exception:
+        pass  # package not installed — skip silently
+
+# ---------------------------------------------------------------------------
 # Analysis
 # ---------------------------------------------------------------------------
 a = Analysis(
@@ -52,27 +83,35 @@ a = Analysis(
     binaries=binaries,
     datas=datas,
     hiddenimports=[
-        # ChromaDB internals (dynamic discovery)
+        # ChromaDB — dynamic loader targets (importlib.import_module strings)
         'chromadb',
+        'chromadb_rust_bindings',
+        'chromadb.telemetry',
+        'chromadb.telemetry.product',
+        'chromadb.telemetry.product.posthog',
         'chromadb.db.mixins',
         'chromadb.segment',
         'chromadb.segment.impl',
         'chromadb.segment.impl.metadata',
+        'chromadb.segment.impl.metadata.sqlite',
         'chromadb.segment.impl.vector',
         'chromadb.segment.impl.vector.local_persistent_hnsw',
+        'chromadb.migrations',
+        # onnxruntime
         'onnxruntime',
         'onnxruntime.capi',
+        'onnxruntime.capi._pybind_state',
         # LangChain providers
         'langchain_ollama',
         'langchain_openai',
         'langchain_google_genai',
         'langchain_community',
         # Document parsers
-        'fitz',        # PyMuPDF
+        'fitz',         # PyMuPDF
         'docx',
         'PIL',
         'pytesseract',
-        # FastAPI / Uvicorn entry points
+        # FastAPI / Uvicorn entry points (all loaded by string at runtime)
         'uvicorn.logging',
         'uvicorn.loops',
         'uvicorn.loops.auto',
@@ -90,19 +129,12 @@ a = Analysis(
         'aiosqlite',
         # MCP
         'mcp',
-        # Windows: bundled sqlite3
+        # Windows bundled sqlite3
         '_sqlite3',
         # Email / multipart (FastAPI dependency)
         'email.mime.multipart',
         'email.mime.text',
-    ],
-    collect_all=[
-        'chromadb',
-        'onnxruntime',
-        'langchain',
-        'langchain_core',
-        'langchain_community',
-    ],
+    ] + extra_hiddenimports,
     hookspath=[],
     runtime_hooks=[],
     excludes=[

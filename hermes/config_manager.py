@@ -110,6 +110,7 @@ class HermesAppConfig:
     # OpenAI
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"
+    openai_embedding_model: str = "text-embedding-3-small"
 
     # Gemini
     gemini_api_key: str = ""
@@ -181,6 +182,8 @@ def merge_into_config(hermes_cfg: "HermesConfig", app_cfg: HermesAppConfig) -> N
         providers.openai.api_key = app_cfg.openai_api_key
     if app_cfg.openai_model:
         providers.openai.model = app_cfg.openai_model
+    if app_cfg.openai_embedding_model:
+        providers.openai.embedding_model = app_cfg.openai_embedding_model
 
     if app_cfg.gemini_api_key:
         providers.gemini.api_key = app_cfg.gemini_api_key

@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hermes - Local-First AI Knowledge Agent</title>
+  <meta name="description" content="Chat with private documents using local or cloud AI. Hermes runs on your machine with a desktop app built on Tauri, Svelte, and FastAPI." />
+
+  <meta property="og:title" content="Hermes - Local-First AI Knowledge Agent" />
+  <meta property="og:description" content="Private-by-default AI assistant for your documents. Download for Windows, macOS, and Linux." />
+  <meta property="og:image" content="assets/arch-diagram.svg" />
+  <meta property="og:type" content="website" />
+
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/logo.svg" alt="Hermes logo" width="34" height="34" />
+      <span>Hermes</span>
+    </div>
+    <nav class="quick-nav" aria-label="Primary sections">
+      <a href="#features">Features</a>
+      <a href="#getting-started">Get Started</a>
+      <a href="#providers">Providers</a>
+    </nav>
+    <a id="github-link" class="link-button" href="https://github.com/VladYord/ProjectHermes" target="_blank" rel="noreferrer">GitHub</a>
+  </header>
+
+  <main>
+    <section class="hero shell reveal">
+      <div class="hero-copy">
+        <p class="eyebrow">Local-first knowledge agent</p>
+        <h1>Your private AI workspace for documents</h1>
+        <p class="lede">
+          Ask questions across PDFs, docs, code, and notes. Keep data on your machine, run with Ollama offline,
+          or plug in OpenAI and Gemini when needed.
+        </p>
+
+        <div class="cta-row">
+          <a id="dl-windows" class="btn btn-primary" href="https://github.com/VladYord/ProjectHermes/releases/latest" target="_blank" rel="noreferrer">Download for Windows</a>
+          <a id="dl-macos" class="btn" href="https://github.com/VladYord/ProjectHermes/releases/latest" target="_blank" rel="noreferrer">macOS</a>
+          <a id="dl-linux-appimage" class="btn" href="https://github.com/VladYord/ProjectHermes/releases/latest" target="_blank" rel="noreferrer">Linux AppImage</a>
+          <a id="dl-linux-deb" class="btn" href="https://github.com/VladYord/ProjectHermes/releases/latest" target="_blank" rel="noreferrer">Linux .deb</a>
+        </div>
+
+        <div class="meta-row">
+          <a id="release-notes-link" href="https://github.com/VladYord/ProjectHermes/releases/latest" target="_blank" rel="noreferrer">Release notes</a>
+          <span>Latest: <strong id="release-version">latest</strong></span>
+        </div>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <img src="assets/arch-diagram.svg" alt="Architecture diagram" />
+      </div>
+    </section>
+
+    <section id="features" class="shell section-pad reveal">
+      <h2>What you get</h2>
+      <div class="card-grid">
+        <article class="card lift">
+          <h3>Private by default</h3>
+          <p>Documents and vector embeddings stay on your machine. Offline mode works with local Ollama models.</p>
+        </article>
+        <article class="card lift">
+          <h3>Natural chat workflow</h3>
+          <p>Streaming responses with conversation memory, source attribution, and a clean desktop UX.</p>
+        </article>
+        <article class="card lift">
+          <h3>Broad file support</h3>
+          <p>PDF, DOCX, Markdown, text, code files, plus OCR for images with bundled Tesseract support.</p>
+        </article>
+        <article class="card lift">
+          <h3>Provider flexibility</h3>
+          <p>Switch between Ollama, OpenAI, and Gemini without changing your document pipeline.</p>
+        </article>
+        <article class="card lift">
+          <h3>Semantic retrieval</h3>
+          <p>ChromaDB-backed search keeps answers grounded in your local knowledge base.</p>
+        </article>
+        <article class="card lift">
+          <h3>MCP-ready</h3>
+          <p>Connect Hermes tools from compatible clients like VS Code and Copilot workflows.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="getting-started" class="shell section-pad steps reveal">
+      <h2>Getting started in 3 steps</h2>
+      <div class="step-grid">
+        <article class="step-card lift">
+          <span>1</span>
+          <h3>Download</h3>
+          <p>Grab the installer for your operating system from the latest release.</p>
+        </article>
+        <article class="step-card lift">
+          <span>2</span>
+          <h3>Install</h3>
+          <p>Run the installer. No separate Python setup is required for end users.</p>
+        </article>
+        <article class="step-card lift">
+          <span>3</span>
+          <h3>Ingest and chat</h3>
+          <p>Add your files, choose a provider, and start asking questions in natural language.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="providers" class="shell section-pad reveal">
+      <h2>Provider setup links</h2>
+      <div class="provider-grid">
+        <article class="provider-card lift">
+          <h3>OpenAI</h3>
+          <p>Use GPT models and OpenAI embeddings.</p>
+          <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">Get API key</a>
+        </article>
+        <article class="provider-card lift">
+          <h3>Google Gemini</h3>
+          <p>Use Gemini via Google AI Studio API keys.</p>
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Get API key</a>
+        </article>
+        <article class="provider-card lift">
+          <h3>Ollama</h3>
+          <p>Run fully local models and embeddings without cloud keys.</p>
+          <a href="https://ollama.com/download" target="_blank" rel="noreferrer">Download Ollama</a>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="shell footer">
+    <p>Hermes is open-source software under the MIT license.</p>
+    <p>
+      Built with Tauri, Svelte, FastAPI, ChromaDB, and LangChain.
+      <a id="footer-releases" href="https://github.com/VladYord/ProjectHermes/releases" target="_blank" rel="noreferrer">All releases</a>
+    </p>
+  </footer>
+
+  <script>
+    function inferRepo() {
+      const host = window.location.hostname;
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+
+      if (host.endsWith('github.io') && pathParts.length > 0) {
+        const owner = host.split('.')[0];
+        const repo = pathParts[0];
+        return owner + '/' + repo;
+      }
+
+      return 'VladYord/ProjectHermes';
+    }
+
+    function setHref(id, href) {
+      const el = document.getElementById(id);
+      if (el) el.href = href;
+    }
+
+    function setDownload(id, url, name) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.href = url;
+      if (name) el.setAttribute('download', name);
+    }
+
+    async function loadLatestRelease() {
+      const repo = inferRepo();
+      const releasesUrl = 'https://github.com/' + repo + '/releases';
+      const latestUrl = releasesUrl + '/latest';
+
+      setHref('github-link', 'https://github.com/' + repo);
+      setHref('release-notes-link', latestUrl);
+      setHref('footer-releases', releasesUrl);
+
+      try {
+        const res = await fetch('https://api.github.com/repos/' + repo + '/releases/latest');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.tag_name) {
+          const version = document.getElementById('release-version');
+          if (version) version.textContent = data.tag_name;
+        }
+
+        if (data.html_url) setHref('release-notes-link', data.html_url);
+
+        for (const asset of (data.assets || [])) {
+          const n = asset.name || '';
+          const u = asset.browser_download_url || '';
+          if (n.endsWith('.exe')) setDownload('dl-windows', u, n);
+          else if (n.endsWith('.dmg')) setDownload('dl-macos', u, n);
+          else if (n.endsWith('.AppImage')) setDownload('dl-linux-appimage', u, n);
+          else if (n.endsWith('.deb')) setDownload('dl-linux-deb', u, n);
+        }
+      } catch (_) {
+        // Keep static fallback links to releases/latest
+      }
+    }
+
+    loadLatestRelease();
+  </script>
+</body>
+</html>

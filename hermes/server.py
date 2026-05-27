@@ -54,7 +54,16 @@ async def lifespan(app: FastAPI):
         logger.warning("Could not load encrypted app config: %s", exc)
 
     _llm_router = LLMRouter()
-    _knowledge = KnowledgeService(embedding_fn=_llm_router.get_embedding_fn())
+    try:
+        embedding_fn = _llm_router.get_embedding_fn()
+    except ValueError as exc:
+        logger.warning(
+            "Configured embedding provider unavailable (%s); falling back to hash embeddings."
+            " Open Settings to reconfigure.",
+            exc,
+        )
+        embedding_fn = _llm_router.get_embedding_fn("hash")
+    _knowledge = KnowledgeService(embedding_fn=embedding_fn)
     _memory = ConversationMemory()
     _chat_service = ChatService(_knowledge, _llm_router, _memory)
     _ingest_service = IngestService(_knowledge)

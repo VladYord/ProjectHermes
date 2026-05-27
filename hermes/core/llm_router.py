@@ -135,6 +135,36 @@ class LLMRouter:
         )
 
     @staticmethod
+    def _build_embedding_openai() -> object:
+        """Semantic embeddings via OpenAI Embeddings API."""
+        from openai import OpenAI
+        from chromadb.api.types import EmbeddingFunction, Documents, Embeddings
+
+        cfg = get_config().llm.providers.openai
+        if not cfg.api_key:
+            raise ValueError(
+                "OpenAI API key not configured "
+                "(llm.providers.openai.api_key or OPENAI_API_KEY env var)"
+            )
+        _api_key = cfg.api_key
+        _model = cfg.embedding_model
+        logger.info("Initializing OpenAI embedding function (model=%s)", _model)
+
+        class _OpenAIEmbeddingFn(EmbeddingFunction):
+            def __init__(self) -> None:
+                self._client = OpenAI(api_key=_api_key)
+                self._model = _model
+
+            def __call__(self, input: Documents) -> Embeddings:
+                response = self._client.embeddings.create(
+                    model=self._model,
+                    input=list(input),
+                )
+                return [item.embedding for item in response.data]
+
+        return _OpenAIEmbeddingFn()
+
+    @staticmethod
     def _build_embedding_azure_openai() -> object:
         """Semantic embeddings via Azure OpenAI (e.g. text-embedding-3-small)."""
         from openai import AzureOpenAI
@@ -176,6 +206,7 @@ class LLMRouter:
     _EMBEDDING_BUILDERS: dict[str, str] = {
         "hash": "_build_embedding_hash",
         "ollama": "_build_embedding_ollama",
+        "openai": "_build_embedding_openai",
         "azure_openai": "_build_embedding_azure_openai",
     }
 

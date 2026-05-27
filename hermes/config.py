@@ -34,6 +34,7 @@ class OllamaProviderConfig(BaseModel):
 class OpenAIProviderConfig(BaseModel):
     api_key: str = ""
     model: str = "gpt-4o"
+    embedding_model: str = "text-embedding-3-small"
 
 
 class GeminiProviderConfig(BaseModel):
