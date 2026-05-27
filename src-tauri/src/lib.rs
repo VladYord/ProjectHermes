@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri::async_runtime::Mutex;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
@@ -135,11 +135,18 @@ pub fn run() {
                         .build(),
                 )?;
             }
-            // Spawn the sidecar in a background task — non-blocking.
+        // Spawn the sidecar in a background task — production only.
+        // In debug builds (`cargo tauri dev`) the developer starts the backend
+        // manually and the frontend connects to hardcoded port 8000.
+        if !cfg!(debug_assertions) {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 spawn_backend(handle).await;
             });
+        } else {
+            log::info!("Dev build: skipping sidecar spawn. \
+                Start backend with: .venv\\Scripts\\python.exe -m hermes --port 8000");
+        }
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -149,7 +156,7 @@ pub fn run() {
             if matches!(event, tauri::RunEvent::Exit) {
                 let child_arc = app_handle.state::<AppState>().backend_child.clone();
                 tauri::async_runtime::spawn(async move {
-                    if let Some(mut child) = child_arc.lock().await.take() {
+                    if let Some(child) = child_arc.lock().await.take() {
                         let _ = child.kill();
                         log::info!("Backend sidecar killed on exit.");
                     }

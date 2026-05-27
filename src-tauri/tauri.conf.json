@@ -36,18 +36,31 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["resources/hermes-server"]
+    "externalBin": ["resources/hermes-server"],
+    "windows": {
+      "nsis": {
+        "displayLanguageSelector": false,
+        "installMode": "currentUser"
+      }
+    },
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "signingIdentity": null,
+      "minimumSystemVersion": "10.15"
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
   },
   "plugins": {
     "shell": {
-      "open": "https?://.*",
-      "scope": [
-        {
-          "name": "resources/hermes-server",
-          "sidecar": true,
-          "args": true
-        }
-      ]
+      "open": "https?://.*"
     }
   }
 }

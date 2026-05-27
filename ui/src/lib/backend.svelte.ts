@@ -55,9 +55,13 @@ async function pollUntilHealthy(timeoutMs = 30_000): Promise<string | null> {
  */
 export async function initBackend(): Promise<string | null> {
   if (!isTauri() || import.meta.env.DEV) {
-    // Browser / plain `npm run dev` — backend started manually
+    // Dev mode: backend started manually on port 8000.
+    // Skip health polling — the app opens immediately; API calls surface
+    // errors inline if the backend is not yet running.
+    // Start it with:  .venv\Scripts\python.exe -m hermes --port 8000
     backend.port = 8000;
-    return pollUntilHealthy();
+    backend.ready = true;
+    return null;
   }
 
   // Packaged Tauri app — port comes from the Rust sidecar via event

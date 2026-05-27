@@ -1,13 +1,13 @@
-.PHONY: run run-mcp test lint clean dev build-ui build-app bundle-backend bundle-app
+.PHONY: run run-mcp test lint clean dev dev-stub build-ui build-app bundle-backend bundle-app
 
 run:
-	python -m hermes
+	.venv\Scripts\python.exe -m hermes
 
 run-mcp:
-	python -m hermes --mcp
+	.venv\Scripts\python.exe -m hermes --mcp
 
 test:
-	python -m pytest tests/ -v
+	.venv\Scripts\python.exe -m pytest tests/ -q
 
 lint:
 	python -m ruff check hermes/ tests/
@@ -23,11 +23,17 @@ clean:
 # ── Desktop App Targets ──────────────────────────────────────────────────────
 
 ## Start Tauri dev window (Svelte HMR + Tauri shell)
-test:
-	.venv\Scripts\python.exe -m pytest tests/ -q
-
-dev:
+dev: dev-stub
 	cargo tauri dev
+
+## Create a minimal stub binary so `cargo tauri dev` can compile.
+## Skips if a real/stub binary already exists in src-tauri/resources/.
+dev-stub:
+ifeq ($(OS),Windows_NT)
+	powershell -ExecutionPolicy Bypass -File packaging\scripts\create-dev-stub.ps1
+else
+	bash packaging/scripts/create-dev-stub.sh
+endif
 
 ## Build Svelte frontend only
 build-ui:
@@ -37,9 +43,13 @@ build-ui:
 build-app: build-ui
 	cargo tauri build
 
-## Run PyInstaller to produce hermes-server binary (Phase 6)
+## Run PyInstaller to produce hermes-server binary (renames to include target triple)
 bundle-backend:
-	python -m PyInstaller packaging/pyinstaller/hermes.spec --distpath src-tauri/resources --workpath build/pyinstaller --noconfirm
+ifeq ($(OS),Windows_NT)
+	powershell -ExecutionPolicy Bypass -File packaging\scripts\build-backend.ps1
+else
+	bash packaging/scripts/build-backend.sh
+endif
 
 ## Full production bundle: backend binary + Tauri installer
 bundle-app: bundle-backend build-app
