@@ -2,6 +2,7 @@
   import ChatSidebar from './ChatSidebar.svelte';
   import ChatWindow from './ChatWindow.svelte';
   import DocumentManager from './DocumentManager.svelte';
+  import SettingsPanel from './SettingsPanel.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
 </script>
 
@@ -10,8 +11,9 @@
   <ChatWindow />
 </div>
 
-<!-- DocumentManager renders as a fixed overlay — outside the grid -->
+<!-- Overlay panels — rendered outside the grid so they float above everything -->
 <DocumentManager />
+<SettingsPanel />
 
 <style>
   .layout {
