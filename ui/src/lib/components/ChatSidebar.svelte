@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { chatStore } from '$lib/stores/sessions.svelte';
   import { uiStore } from '$lib/stores/ui.svelte';
+  import { backend } from '$lib/backend.svelte';
 
   onMount(() => {
     chatStore.loadSessions();
@@ -26,6 +27,10 @@
     <span class="logo">⚡</span>
     {#if !uiStore.sidebarCollapsed}
       <span class="name">Hermes</span>
+      <span class="status-pill" class:online={backend.connected}>
+        <span class="status-dot"></span>
+        {backend.connected ? 'Server connected' : 'Server disconnected'}
+      </span>
     {/if}
   </header>
 
@@ -109,6 +114,36 @@
     color: var(--text-primary);
     white-space: nowrap;
     overflow: hidden;
+  }
+
+  .status-pill {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 8px;
+    white-space: nowrap;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--error);
+    flex-shrink: 0;
+  }
+
+  .status-pill.online {
+    color: var(--success);
+    border-color: rgba(76, 175, 145, 0.35);
+  }
+
+  .status-pill.online .status-dot {
+    background: var(--success);
   }
 
   .new-chat {

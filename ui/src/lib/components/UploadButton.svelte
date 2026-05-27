@@ -16,10 +16,20 @@
   }
 
   async function openPicker() {
-    if (isTauri()) {
-      await openTauriDialog();
-    } else {
-      inputEl?.click();
+    try {
+      if (isTauri()) {
+        await openTauriDialog();
+      } else {
+        inputEl?.click();
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      docStore.uploadState = {
+        active: true,
+        filename: '',
+        progress: 'error',
+        error: `File picker failed: ${msg}`,
+      };
     }
   }
 

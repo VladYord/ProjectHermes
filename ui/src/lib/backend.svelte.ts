@@ -17,6 +17,7 @@ function isTauri(): boolean {
 class BackendState {
   port = $state<number | null>(null);
   ready = $state(false);
+  connected = $state(false);
 }
 
 export const backend = new BackendState();
@@ -30,6 +31,44 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+let watchersAttached = false;
+
+async function probeHealth(): Promise<boolean> {
+  try {
+    const res = await fetch(`${apiBase()}/api/health`);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+function attachConnectionWatchers(): void {
+  if (watchersAttached || typeof window === 'undefined') return;
+  watchersAttached = true;
+
+  const refresh = () => {
+    void refreshBackendConnection();
+  };
+
+  // Re-check when user returns to the app, without background polling noise.
+  window.addEventListener('focus', refresh);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      refresh();
+    }
+  });
+}
+
+export function setBackendConnected(connected: boolean): void {
+  backend.connected = connected;
+}
+
+export async function refreshBackendConnection(): Promise<boolean> {
+  const ok = await probeHealth();
+  backend.connected = ok;
+  return ok;
+}
+
 /** Poll GET /api/health until 200 OK or timeout. Returns null on success, error string on failure. */
 async function pollUntilHealthy(timeoutMs = 30_000): Promise<string | null> {
   const start = Date.now();
@@ -38,11 +77,13 @@ async function pollUntilHealthy(timeoutMs = 30_000): Promise<string | null> {
       const res = await fetch(`${apiBase()}/api/health`);
       if (res.ok) {
         backend.ready = true;
+        backend.connected = true;
         return null;
       }
     } catch {
       // Backend not yet accepting connections — keep polling
     }
+    backend.connected = false;
     await sleep(500);
   }
   return 'Timed out (30 s) waiting for backend. Start it manually: python -m hermes --port 8000';
@@ -61,6 +102,8 @@ export async function initBackend(): Promise<string | null> {
     // Start it with:  .venv\Scripts\python.exe -m hermes --port 8000
     backend.port = 8000;
     backend.ready = true;
+    attachConnectionWatchers();
+    void refreshBackendConnection();
     return null;
   }
 
@@ -72,7 +115,9 @@ export async function initBackend(): Promise<string | null> {
   try {
     const port = await invoke<number>('get_backend_port');
     backend.port = port;
-    return pollUntilHealthy();
+    const err = await pollUntilHealthy();
+    attachConnectionWatchers();
+    return err;
   } catch {
     // Not ready yet — fall through to event listener
   }
@@ -84,13 +129,16 @@ export async function initBackend(): Promise<string | null> {
       if (settled) return;
       settled = true;
       backend.port = event.payload.port;
-      resolve(await pollUntilHealthy());
+      const err = await pollUntilHealthy();
+      attachConnectionWatchers();
+      resolve(err);
     });
 
     // Hard timeout — in case the sidecar fails to start entirely
     setTimeout(() => {
       if (!settled) {
         settled = true;
+        backend.connected = false;
         resolve('Backend failed to start. Check the application logs in %APPDATA%\\Hermes\\.');
       }
     }, 60_000);

@@ -1,8 +1,29 @@
 import { apiBase } from '$lib/backend.svelte';
+import { apiFetch } from './client';
 
 export interface ChatChunk {
   type: 'text' | 'done' | 'error';
   data: string;
+}
+
+export interface ChatResponse {
+  session_id: string;
+  answer: string;
+}
+
+/**
+ * Validate chat LLM connectivity for a specific provider by making
+ * a real non-streaming /api/chat request.
+ */
+export function testProviderChat(provider: string): Promise<ChatResponse> {
+  return apiFetch('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({
+      message: 'Reply with exactly: OK',
+      provider,
+      stream: false,
+    }),
+  });
 }
 
 /**

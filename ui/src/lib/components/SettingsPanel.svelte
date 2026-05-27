@@ -15,6 +15,13 @@
     configStore.load();
   });
 
+  // Reload config every time settings panel is opened.
+  $effect(() => {
+    if (uiStore.showSettings) {
+      void configStore.load();
+    }
+  });
+
   // Auto-refresh Ollama status every 30s while panel is open
   $effect(() => {
     if (!uiStore.showSettings) return;
@@ -76,7 +83,11 @@
           {/each}
 
           {#if !configStore.config}
-            <p class="loading-hint">Loading config… (is the backend running on port 8000?)</p>
+            <p class="loading-hint">Loading config…</p>
+            {#if configStore.loadError}
+              <p class="load-error">{configStore.loadError}</p>
+            {/if}
+            <button class="retry-load" onclick={() => configStore.load()}>Retry</button>
           {/if}
         </div>
 
@@ -222,7 +233,33 @@
     font-size: 13px;
     color: var(--text-muted);
     text-align: center;
-    padding: 24px 0;
+    padding: 16px 0 4px;
+  }
+
+  .load-error {
+    font-size: 12px;
+    color: var(--error);
+    background: rgba(244, 67, 54, 0.08);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: var(--radius-md);
+    padding: 8px 10px;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .retry-load {
+    align-self: center;
+    font-size: 12px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .retry-load:hover {
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .default-provider-row {

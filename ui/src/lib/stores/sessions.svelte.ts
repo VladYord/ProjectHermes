@@ -132,6 +132,13 @@ class SessionsStore {
           break;
         }
       }
+
+      // If stream closed without text or explicit error, surface a clear hint.
+      const last = this.messages.at(-1);
+      if (last?.role === 'assistant' && last.content.trim() === '') {
+        last.content =
+          'No response received from LLM. Open Settings and run Test Connection for your provider.';
+      }
     } catch (err: unknown) {
       const isAbort = err instanceof Error && err.name === 'AbortError';
       if (!isAbort) {

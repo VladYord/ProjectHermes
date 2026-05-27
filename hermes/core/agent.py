@@ -101,6 +101,18 @@ class HermesAgent:
                     full_answer += token
                     yield token
 
+        # Some providers may not surface token-stream events through this path.
+        # Fall back to a normal invoke so chat still returns a response.
+        if full_answer.strip() == "":
+            result = await self._graph.ainvoke({"messages": messages})
+            output_messages = result.get("messages", [])
+            for msg in reversed(output_messages):
+                if isinstance(msg, AIMessage) and msg.content:
+                    full_answer = msg.content if isinstance(msg.content, str) else str(msg.content)
+                    break
+            if full_answer:
+                yield full_answer
+
         # Save completed conversation to session
         session.add("human", message)
         session.add("ai", full_answer)

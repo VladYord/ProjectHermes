@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { configStore } from '$lib/stores/config.svelte';
+  import { testProviderChat } from '$lib/api/chat';
   import OllamaStatus from './OllamaStatus.svelte';
   import type { ProviderConfig } from '$lib/api/config';
 
@@ -37,6 +38,7 @@
 
   let testing = $state(false);
   let testResult = $state<{ ok: boolean; latency?: number } | null>(null);
+  let testError = $state<string | null>(null);
   let saved = $state(false);
 
   // ── Status dot ───────────────────────────────────────────────
@@ -93,13 +95,32 @@
   async function testConnection() {
     testing = true;
     testResult = null;
-    await configStore.refreshProviders();
-    const updated = configStore.providers.find((p) => p.name === name);
-    if (updated) {
+    testError = null;
+
+    if (name === 'ollama') {
+      await configStore.refreshProviders();
+      const updated = configStore.providers.find((p) => p.name === name);
+      if (updated) {
+        testResult = {
+          ok: updated.reachable === true,
+          latency: updated.latency_ms ?? undefined,
+        };
+      }
+      testing = false;
+      return;
+    }
+
+    const startedAt = performance.now();
+    try {
+      await testProviderChat(name);
       testResult = {
-        ok: name === 'ollama' ? (updated.reachable === true) : updated.api_key_set,
-        latency: updated.latency_ms ?? undefined,
+        ok: true,
+        latency: Math.round(performance.now() - startedAt),
       };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      testResult = { ok: false };
+      testError = msg;
     }
     testing = false;
   }
@@ -216,6 +237,10 @@
         </span>
       {/if}
     </div>
+
+    {#if testError}
+      <div class="test-error">{testError}</div>
+    {/if}
   </div>
 </div>
 
@@ -358,4 +383,14 @@
   }
   .test-result.ok   { color: var(--success); }
   .test-result.fail { color: var(--error); }
+
+  .test-error {
+    font-size: 12px;
+    color: var(--error);
+    background: rgba(244, 67, 54, 0.08);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    line-height: 1.4;
+  }
 </style>

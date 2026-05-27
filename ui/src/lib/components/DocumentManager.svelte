@@ -9,6 +9,13 @@
   onMount(() => {
     docStore.refreshDocuments();
   });
+
+  // If backend starts after initial app load, refresh when panel is opened.
+  $effect(() => {
+    if (uiStore.showDocManager) {
+      void docStore.refreshDocuments();
+    }
+  });
 </script>
 
 {#if uiStore.showDocManager}

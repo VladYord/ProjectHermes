@@ -15,15 +15,18 @@ class ConfigStore {
   providers = $state<ProviderStatus[]>([]);
   isSaving = $state(false);
   saveError = $state<string | null>(null);
+  loadError = $state<string | null>(null);
   backendVersion = $state<string | null>(null);
 
   async load(): Promise<void> {
+    this.loadError = null;
     try {
       const [cfg, prov] = await Promise.all([getConfig(), getProviders()]);
       this.config = cfg;
       this.providers = prov.providers;
-    } catch {
-      // Backend not running — leave nulls
+    } catch (err: unknown) {
+      this.loadError = err instanceof Error ? err.message : String(err);
+      // Keep previous config if any; if none exists, panel will show loading+error.
     }
   }
 

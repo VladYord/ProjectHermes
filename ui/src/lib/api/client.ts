@@ -1,4 +1,4 @@
-import { apiBase } from '$lib/backend.svelte';
+import { apiBase, setBackendConnected } from '$lib/backend.svelte';
 
 export class ApiError extends Error {
   constructor(
@@ -14,13 +14,23 @@ export async function apiFetch<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
-  const res = await fetch(`${apiBase()}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase()}${path}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+      },
+      ...options,
+    });
+  } catch (err) {
+    setBackendConnected(false);
+    throw err;
+  }
+
+  // Any HTTP response means server is reachable, even for 4xx/5xx.
+  setBackendConnected(true);
+
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new ApiError(res.status, text);

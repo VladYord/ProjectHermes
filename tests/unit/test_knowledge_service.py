@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from chromadb.errors import InvalidArgumentError
 
 from hermes.config import reset_config
 
@@ -88,6 +89,16 @@ class TestIngestion:
     def test_ingest_nonexistent_file_raises(self, knowledge_svc, tmp_path):
         with pytest.raises(FileNotFoundError):
             knowledge_svc.ingest_file(tmp_path / "nope.txt")
+
+    def test_ingest_dimension_mismatch_raises_value_error(self, knowledge_svc, sample_txt):
+        class _BrokenCollection:
+            def add(self, *args, **kwargs):
+                raise InvalidArgumentError("Collection expecting embedding with dimension of 384, got 1536")
+
+        knowledge_svc._collection = _BrokenCollection()  # type: ignore[attr-defined]
+
+        with pytest.raises(ValueError, match="Embedding dimension mismatch"):
+            knowledge_svc.ingest_file(sample_txt)
 
 
 class TestSearch:

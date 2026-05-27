@@ -11,7 +11,7 @@
 
 ## Screenshot
 
-![Hermes UI](doc/screenshots/hermes-screenshot.png)
+![Hermes UI](screenshots/HermesScreenshot.png)
 
 ---
 

@@ -11,6 +11,7 @@ from typing import Any
 import chromadb
 from chromadb.api.types import EmbeddingFunction, Documents, Embeddings
 from chromadb.config import Settings as ChromaSettings
+from chromadb.errors import InvalidArgumentError
 
 from hermes.config import get_config
 from hermes.logging import get_logger
@@ -111,13 +112,24 @@ class KnowledgeService:
 
         # Send in batches to avoid hitting embedding API request-size limits.
         batch_size = 96
-        for start_idx in range(0, len(ids), batch_size):
-            end_idx = start_idx + batch_size
-            self._collection.add(
-                ids=ids[start_idx:end_idx],
-                documents=documents[start_idx:end_idx],
-                metadatas=metadatas[start_idx:end_idx],
-            )
+        try:
+            for start_idx in range(0, len(ids), batch_size):
+                end_idx = start_idx + batch_size
+                self._collection.add(
+                    ids=ids[start_idx:end_idx],
+                    documents=documents[start_idx:end_idx],
+                    metadatas=metadatas[start_idx:end_idx],
+                )
+        except InvalidArgumentError as exc:
+            msg = str(exc)
+            if "dimension" in msg.lower() and "expecting embedding" in msg.lower():
+                raise ValueError(
+                    "Embedding dimension mismatch in ChromaDB. "
+                    "Your existing collection was created with a different embedding provider/model. "
+                    "Clear the vector store and re-ingest documents (data/chromadb for dev, "
+                    "%APPDATA%\\Hermes\\chromadb for packaged app)."
+                ) from exc
+            raise
 
         elapsed = time.perf_counter() - start
         logger.info(

@@ -1,4 +1,5 @@
 import { apiBase } from '$lib/backend.svelte';
+import { setBackendConnected } from '$lib/backend.svelte';
 import { apiFetch } from './client';
 
 /** Matches backend `DocumentInfo` schema. */
@@ -27,11 +28,21 @@ export async function uploadDocument(file: File): Promise<IngestResponse> {
   const form = new FormData();
   form.append('file', file, file.name);
 
-  const res = await fetch(`${apiBase()}/api/ingest/upload`, {
-    method: 'POST',
-    body: form,
-    // Do NOT set Content-Type — let the browser set it with the boundary
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${apiBase()}/api/ingest/upload`, {
+      method: 'POST',
+      body: form,
+      // Do NOT set Content-Type — let the browser set it with the boundary
+    });
+  } catch (err) {
+    setBackendConnected(false);
+    throw err;
+  }
+
+  // HTTP response received => backend reachable.
+  setBackendConnected(true);
+
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     throw new Error(`Upload failed (${res.status}): ${text}`);
