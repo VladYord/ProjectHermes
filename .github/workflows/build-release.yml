@@ -98,12 +98,19 @@ jobs:
               /usr/share/tessdata \
               /usr/share/tesseract-ocr/5/tessdata \
               /usr/share/tesseract-ocr/4/tessdata \
-              /usr/share/tesseract-ocr/tessdata; do
+              /usr/share/tesseract-ocr/tessdata \
+              /usr/share/tesseract-ocr/4.00/tessdata; do
             if [ -f "$SEARCH_PATH/eng.traineddata" ]; then
               cp "$SEARCH_PATH/eng.traineddata" packaging/tesseract/tessdata/
               break
             fi
           done
+          if [ ! -f packaging/tesseract/tessdata/eng.traineddata ]; then
+            FOUND=$(find /usr -path '*/tessdata/eng.traineddata' -type f 2>/dev/null | head -n 1 || true)
+            if [ -n "$FOUND" ]; then
+              cp "$FOUND" packaging/tesseract/tessdata/
+            fi
+          fi
           if [ ! -f packaging/tesseract/tessdata/eng.traineddata ]; then
             echo "ERROR: could not find eng.traineddata on Linux"
             exit 1

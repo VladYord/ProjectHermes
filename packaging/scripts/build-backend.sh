@@ -74,6 +74,7 @@ if [ ! -f "${TESS_DATA_DEST}/eng.traineddata" ]; then
         /usr/share/tessdata \
         /usr/share/tesseract-ocr/5/tessdata \
         /usr/share/tesseract-ocr/4/tessdata \
+        /usr/share/tesseract-ocr/4.00/tessdata \
         /usr/share/tesseract-ocr/tessdata \
         /opt/homebrew/share/tessdata; do
         if [ -f "${SEARCH_PATH}/eng.traineddata" ]; then
@@ -83,6 +84,14 @@ if [ ! -f "${TESS_DATA_DEST}/eng.traineddata" ]; then
             break
         fi
     done
+    if [ ! -f "${TESS_DATA_DEST}/eng.traineddata" ]; then
+        FOUND=$(find /usr -path '*/tessdata/eng.traineddata' -type f 2>/dev/null | head -n 1 || true)
+        if [ -n "$FOUND" ]; then
+            echo "Copying tessdata from ${FOUND} ..."
+            mkdir -p "$TESS_DATA_DEST"
+            cp "$FOUND" "$TESS_DATA_DEST/"
+        fi
+    fi
     if [ ! -f "${TESS_DATA_DEST}/eng.traineddata" ]; then
         echo "ERROR: could not find eng.traineddata in any known tessdata location"
         exit 1
