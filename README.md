@@ -1,7 +1,7 @@
 # Hermes — Local-First AI Knowledge Agent
 
-[![Latest Release](https://img.shields.io/github/v/release/YOUR_USERNAME/ProjectHermes?label=Download&logo=github&color=blue)](https://github.com/YOUR_USERNAME/ProjectHermes/releases/latest)
-[![Build](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/ProjectHermes/build-release.yml?label=Build)](https://github.com/YOUR_USERNAME/ProjectHermes/actions/workflows/build-release.yml)
+[![Latest Release](https://img.shields.io/github/v/release/VladYord/ProjectHermes?label=Download&logo=github&color=blue)](https://github.com/VladYord/ProjectHermes/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/VladYord/ProjectHermes/build-release.yml?label=Build)](https://github.com/VladYord/ProjectHermes/actions/workflows/build-release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](#download)
 
@@ -30,11 +30,11 @@
 
 | Platform | Installer |
 |----------|-----------|
-| Windows  | [Hermes_x64-setup.exe](https://github.com/YOUR_USERNAME/ProjectHermes/releases/latest) |
-| macOS    | [Hermes_x64.dmg](https://github.com/YOUR_USERNAME/ProjectHermes/releases/latest) |
-| Linux    | [hermes_amd64.AppImage](https://github.com/YOUR_USERNAME/ProjectHermes/releases/latest) |
+| Windows  | [Hermes_x64-setup.exe](https://github.com/VladYord/ProjectHermes/releases/latest) |
+| macOS    | [Hermes_x64.dmg](https://github.com/VladYord/ProjectHermes/releases/latest) |
+| Linux    | [hermes_amd64.AppImage](https://github.com/VladYord/ProjectHermes/releases/latest) |
 
-> All releases are on the [GitHub Releases page](https://github.com/YOUR_USERNAME/ProjectHermes/releases).
+> All releases are on the [GitHub Releases page](https://github.com/VladYord/ProjectHermes/releases).
 
 ---
 
