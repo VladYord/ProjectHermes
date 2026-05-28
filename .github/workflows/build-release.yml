@@ -75,16 +75,39 @@ jobs:
         run: |
           mkdir -p packaging/tesseract/mac packaging/tesseract/tessdata
           cp "$(which tesseract)" packaging/tesseract/mac/
-          cp /usr/local/share/tessdata/eng.traineddata packaging/tesseract/tessdata/ 2>/dev/null \
-          || cp /opt/homebrew/share/tessdata/eng.traineddata packaging/tesseract/tessdata/
+          for SEARCH_PATH in \
+              /usr/local/share/tessdata \
+              /opt/homebrew/share/tessdata \
+              /usr/share/tessdata; do
+            if [ -f "$SEARCH_PATH/eng.traineddata" ]; then
+              cp "$SEARCH_PATH/eng.traineddata" packaging/tesseract/tessdata/
+              break
+            fi
+          done
+          if [ ! -f packaging/tesseract/tessdata/eng.traineddata ]; then
+            echo "ERROR: could not find eng.traineddata on macOS"
+            exit 1
+          fi
 
       - name: Bundle Tesseract (Linux)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           mkdir -p packaging/tesseract/linux packaging/tesseract/tessdata
           cp "$(which tesseract)" packaging/tesseract/linux/
-          cp /usr/share/tesseract-ocr/5/tessdata/eng.traineddata packaging/tesseract/tessdata/ 2>/dev/null \
-          || cp /usr/share/tesseract-ocr/4/tessdata/eng.traineddata packaging/tesseract/tessdata/
+          for SEARCH_PATH in \
+              /usr/share/tessdata \
+              /usr/share/tesseract-ocr/5/tessdata \
+              /usr/share/tesseract-ocr/4/tessdata \
+              /usr/share/tesseract-ocr/tessdata; do
+            if [ -f "$SEARCH_PATH/eng.traineddata" ]; then
+              cp "$SEARCH_PATH/eng.traineddata" packaging/tesseract/tessdata/
+              break
+            fi
+          done
+          if [ ! -f packaging/tesseract/tessdata/eng.traineddata ]; then
+            echo "ERROR: could not find eng.traineddata on Linux"
+            exit 1
+          fi
 
       # ── Build hermes-server sidecar (PyInstaller) ────────────────────────
       - name: Build hermes-server (Windows)
@@ -95,6 +118,8 @@ jobs:
 
       - name: Build hermes-server (Unix)
         if: matrix.platform != 'windows-latest'
+        env:
+          TARGET_TRIPLE: ${{ matrix.target }}
         run: bash packaging/scripts/build-backend.sh
 
       # ── Node.js 20 ────────────────────────────────────────────────────────

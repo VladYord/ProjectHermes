@@ -15,10 +15,20 @@ cd "$PROJECT_ROOT"
 OUTPUT_DIR="${1:-src-tauri/resources}"
 PLATFORM="$(uname -s)"
 ARCH="$(uname -m)"
+TARGET_TRIPLE="${TARGET_TRIPLE:-}"
+
+if [ -z "${TARGET_TRIPLE}" ]; then
+    if [ "${PLATFORM}" = "Darwin" ]; then
+        TARGET_TRIPLE="$( [ "${ARCH}" = "arm64" ] && echo "aarch64-apple-darwin" || echo "x86_64-apple-darwin" )"
+    else
+        TARGET_TRIPLE="x86_64-unknown-linux-gnu"
+    fi
+fi
 
 echo ""
 echo "=== Hermes backend build (${PLATFORM}/${ARCH}) ==="
 echo "Output : ${OUTPUT_DIR}"
+echo "Target : ${TARGET_TRIPLE}"
 
 # ── Python interpreter ────────────────────────────────────────────────────────
 if [ -f ".venv/bin/python" ]; then
@@ -61,8 +71,10 @@ TESS_DATA_DEST="packaging/tesseract/tessdata"
 if [ ! -f "${TESS_DATA_DEST}/eng.traineddata" ]; then
     for SEARCH_PATH in \
         /usr/local/share/tessdata \
+        /usr/share/tessdata \
         /usr/share/tesseract-ocr/5/tessdata \
         /usr/share/tesseract-ocr/4/tessdata \
+        /usr/share/tesseract-ocr/tessdata \
         /opt/homebrew/share/tessdata; do
         if [ -f "${SEARCH_PATH}/eng.traineddata" ]; then
             echo "Copying tessdata from ${SEARCH_PATH} ..."
@@ -71,6 +83,10 @@ if [ ! -f "${TESS_DATA_DEST}/eng.traineddata" ]; then
             break
         fi
     done
+    if [ ! -f "${TESS_DATA_DEST}/eng.traineddata" ]; then
+        echo "ERROR: could not find eng.traineddata in any known tessdata location"
+        exit 1
+    fi
 fi
 
 # ── Run PyInstaller ───────────────────────────────────────────────────────────
@@ -83,15 +99,7 @@ echo "Running PyInstaller..."
     --noconfirm
 
 # ── Rename to include Rust target triple ──────────────────────────────────────
-if [ "$PLATFORM" = "Darwin" ]; then
-    if [ "$ARCH" = "arm64" ]; then
-        TRIPLE="aarch64-apple-darwin"
-    else
-        TRIPLE="x86_64-apple-darwin"
-    fi
-else
-    TRIPLE="x86_64-unknown-linux-gnu"
-fi
+TRIPLE="${TARGET_TRIPLE}"
 
 SRC="${OUTPUT_DIR}/hermes-server"
 DEST="${OUTPUT_DIR}/hermes-server-${TRIPLE}"
