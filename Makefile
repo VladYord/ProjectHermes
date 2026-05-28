@@ -59,6 +59,6 @@ release:
 	@echo Releasing version $(VERSION)
 	git add -A
 	git commit -m "chore: release v$(VERSION)"
-	git tag v$(VERSION)
+	git tag -a v$(VERSION) -m "Release v$(VERSION)"
 	git push origin main
 	git push origin v$(VERSION)
