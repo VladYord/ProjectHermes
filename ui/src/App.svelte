@@ -6,7 +6,11 @@
   let startError = $state<string | null>(null);
 
   onMount(async () => {
-    startError = await initBackend();
+    try {
+      startError = await initBackend();
+    } catch (error) {
+      startError = error instanceof Error ? error.message : 'Unexpected startup error';
+    }
   });
 </script>
 
@@ -28,6 +32,8 @@
     <span class="splash-icon">⚡</span>
     <p class="splash-title">Hermes</p>
     <p class="splash-msg">Starting backend…</p>
+    <p class="splash-msg">It will take some time... Extracting many dependencies...</p>
+    <p class="splash-phase">{backend.startupPhase}</p>
     <div class="dots">
       <span class="dot"></span>
       <span class="dot"></span>
@@ -72,6 +78,15 @@
     text-align: center;
     max-width: 360px;
     line-height: 1.5;
+  }
+
+  .splash-phase {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+    text-align: center;
+    max-width: 420px;
+    opacity: 0.8;
   }
 
   /* Animated dots (reuses StreamingDots pattern) */

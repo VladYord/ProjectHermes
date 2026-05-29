@@ -7,6 +7,7 @@ import os
 import socket
 import ssl
 import sys
+from pathlib import Path
 
 # ── PyInstaller frozen-bundle detection ─────────────────────────────────────
 # When running as a packaged executable (PyInstaller one-file), set env vars
@@ -32,6 +33,20 @@ def find_free_port() -> int:
         return s.getsockname()[1]
 
 
+def write_backend_port_file(port: int) -> None:
+    """Persist the chosen packaged-backend port for the Tauri shell fallback."""
+    if not os.environ.get('HERMES_PACKAGED'):
+        return
+
+    try:
+        from hermes.config_manager import get_app_data_dir
+
+        port_file = get_app_data_dir() / "backend-port.txt"
+        port_file.write_text(f"{port}\n", encoding="utf-8")
+    except Exception as exc:
+        print(f"ERROR: Failed to write backend port file: {exc}", file=sys.stderr, flush=True)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Hermes — Local-first AI knowledge agent")
     parser.add_argument("--host", default=None, help="Server host (overrides config)")
@@ -53,24 +68,43 @@ def main() -> None:
         os.environ.setdefault('HERMES_PACKAGED', '1')
 
     # Load config (must happen before other imports that use get_config)
-    from hermes.config import load_config, _config
-    import hermes.config as config_module
+    try:
+        from hermes.config import load_config, _config
+        import hermes.config as config_module
 
-    config_module._config = load_config(args.config)
-    cfg = config_module._config
+        config_module._config = load_config(args.config)
+        cfg = config_module._config
 
-    # Apply CLI overrides
-    if args.host:
-        cfg.server.host = args.host
-    if args.port is not None:
+        # Apply CLI overrides
+        if args.host:
+            cfg.server.host = args.host
+        if args.port is not None:
+            if args.port == 0:
+                cfg.server.port = find_free_port()
+            else:
+                cfg.server.port = args.port
+    except Exception as e:
+        # If config fails, use reasonable defaults and still print PORT
+        # so the parent process (Tauri) knows we're alive
+        import sys as _sys
+        print(f"ERROR: Config loading failed: {e}", file=_sys.stderr, flush=True)
+        cfg = None
         if args.port == 0:
+            from hermes.config import get_config
+            cfg = get_config()
             cfg.server.port = find_free_port()
         else:
-            cfg.server.port = args.port
+            port = args.port or 8000
+            print(f"PORT={port}", flush=True)
+            raise
 
     # Print PORT= before starting so Tauri (or any parent process) can read it.
     # Format is exactly "PORT=<number>\n" — Tauri parses this line from stdout.
-    print(f"PORT={cfg.server.port}", flush=True)
+    # Use explicit sys.stdout.write + flush for maximum compatibility.
+    import sys as _sys
+    _sys.stdout.write(f"PORT={cfg.server.port}\n")
+    _sys.stdout.flush()
+    write_backend_port_file(cfg.server.port)
 
     from hermes.logging import setup_logging
     setup_logging()

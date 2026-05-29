@@ -87,12 +87,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "tauri://localhost",        # Tauri WebView (production bundle)
+        "app://localhost",          # Tauri custom protocol variant
+        "http://tauri.localhost",   # Tauri WebView variant
         "https://tauri.localhost",  # Tauri WebView variant
         "http://localhost:5173",    # Vite dev server
         "http://localhost:1420",    # Tauri dev fallback
         "http://127.0.0.1:5173",
         "http://localhost:8000",    # Direct backend calls
     ],
+    allow_origin_regex=r"^https?://(?:localhost|127\.0\.0\.1)(?::\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

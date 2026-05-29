@@ -4,11 +4,11 @@
 
 .DESCRIPTION
     Produces a single-file executable suitable for bundling with the Tauri app.
-    The output is placed in src-tauri/resources/ and renamed to include the
-    Rust target triple so Tauri can auto-bundle it.
+    The output is placed in backend/dist/ and renamed to include the
+    Rust target triple. A separate copy script moves it to src-tauri/resources/.
 
 .PARAMETER OutputDir
-    Destination directory for the built binary (default: src-tauri\resources).
+    Destination directory for the built binary (default: backend\dist).
 
 .PARAMETER VenvPython
     Path to the Python executable to use (default: .venv\Scripts\python.exe).
@@ -18,7 +18,7 @@
     .\packaging\scripts\build-backend.ps1 -OutputDir "C:\custom\path"
 #>
 param(
-    [string]$OutputDir  = "src-tauri\resources",
+    [string]$OutputDir  = "backend\dist",
     [string]$VenvPython = ".venv\Scripts\python.exe"
 )
 
