@@ -44,7 +44,9 @@
 
 1. **Download and install** the installer for your platform from the table above.
 2. **Open Settings** (gear icon) → enter your LLM provider API key, or point Hermes at a local Ollama instance.
-3. **Ingest a document** using the Documents panel, then start chatting.
+3. **Run Test Connection** for the provider you want to use.
+4. Hermes chats through the **Default Provider** in Settings. If a provider test succeeds and the current default provider is unavailable, Hermes automatically switches the default to the tested provider.
+5. **Ingest a document** using the Documents panel, then start chatting.
 
 ### What the app actually runs
 
@@ -66,6 +68,8 @@ Then in Settings → LLM Provider → select **Ollama** → `http://localhost:11
 ---
 
 ## Architecture
+
+![Hermes UI](screenshots/arch-diagram.svg)
 
 ```
 ┌──────────────────────────── Tauri Desktop App ────────────────────────────┐

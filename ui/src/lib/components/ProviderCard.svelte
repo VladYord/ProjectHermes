@@ -39,6 +39,7 @@
   let testing = $state(false);
   let testResult = $state<{ ok: boolean; latency?: number } | null>(null);
   let testError = $state<string | null>(null);
+  let testInfo = $state<string | null>(null);
   let saved = $state(false);
 
   // ── Status dot ───────────────────────────────────────────────
@@ -62,6 +63,13 @@
       return 'checking…';
     }
     return status?.api_key_set ? 'configured' : 'not configured';
+  }
+
+  function isProviderUsable(providerName: string): boolean {
+    const provider = configStore.providers.find((p) => p.name === providerName);
+    if (!provider) return false;
+    if (providerName === 'ollama') return provider.reachable === true;
+    return provider.available === true;
   }
 
   // ── Actions ──────────────────────────────────────────────────
@@ -96,6 +104,7 @@
     testing = true;
     testResult = null;
     testError = null;
+    testInfo = null;
 
     if (name === 'ollama') {
       await configStore.refreshProviders();
@@ -113,6 +122,14 @@
     const startedAt = performance.now();
     try {
       await testProviderChat(name);
+      await configStore.refreshProviders();
+
+      const currentDefault = configStore.config?.default_provider;
+      if (currentDefault && currentDefault !== name && !isProviderUsable(currentDefault)) {
+        await configStore.setDefaultProvider(name);
+        testInfo = `${DISPLAY_NAMES[name] ?? name} is now the default provider because ${DISPLAY_NAMES[currentDefault] ?? currentDefault} is unavailable.`;
+      }
+
       testResult = {
         ok: true,
         latency: Math.round(performance.now() - startedAt),
@@ -240,6 +257,10 @@
 
     {#if testError}
       <div class="test-error">{testError}</div>
+    {/if}
+
+    {#if testInfo}
+      <div class="test-info">{testInfo}</div>
     {/if}
   </div>
 </div>
@@ -389,6 +410,16 @@
     color: var(--error);
     background: rgba(244, 67, 54, 0.08);
     border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    line-height: 1.4;
+  }
+
+  .test-info {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 6px 8px;
     line-height: 1.4;

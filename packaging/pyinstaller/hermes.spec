@@ -64,6 +64,7 @@ for _pkg in [
     'langchain_google_genai',
     'langchain_litellm',
     'litellm',
+    'tiktoken',
     'posthog',          # chromadb telemetry back-end
 ]:
     try:
@@ -106,6 +107,10 @@ a = Analysis(
         'langchain_openai',
         'langchain_google_genai',
         'langchain_community',
+        # Tokenization plugins used by LiteLLM/OpenAI model helpers
+        'tiktoken',
+        'tiktoken_ext',
+        'tiktoken_ext.openai_public',
         # Document parsers
         'fitz',         # PyMuPDF
         'docx',

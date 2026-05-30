@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" fill="none">
+  <rect width="1200" height="720" fill="#fffaf2"/>
+
+  <rect x="60" y="60" width="760" height="580" rx="24" fill="#ffffff" stroke="#d8cdbb" stroke-width="3"/>
+  <text x="90" y="105" fill="#1b2a2f" font-size="30" font-family="Segoe UI, Arial">Hermes Desktop (Tauri)</text>
+
+  <rect x="100" y="150" width="680" height="150" rx="16" fill="#f5efe4" stroke="#d8cdbb"/>
+  <text x="130" y="215" fill="#1b2a2f" font-size="36" font-family="Segoe UI, Arial">Svelte 5 UI</text>
+  <text x="130" y="255" fill="#4d5f66" font-size="22" font-family="Segoe UI, Arial">Chat, documents, provider settings</text>
+
+  <rect x="100" y="350" width="680" height="240" rx="16" fill="#eaf4f1" stroke="#b8ddd6"/>
+  <text x="130" y="410" fill="#1b2a2f" font-size="34" font-family="Segoe UI, Arial">Python FastAPI Sidecar</text>
+  <text x="130" y="450" fill="#4d5f66" font-size="22" font-family="Segoe UI, Arial">LangChain agent + MCP server</text>
+
+  <rect x="130" y="482" width="250" height="82" rx="12" fill="#ffffff" stroke="#cfe5df"/>
+  <text x="155" y="533" fill="#1b2a2f" font-size="24" font-family="Segoe UI, Arial">ChromaDB</text>
+
+  <rect x="405" y="482" width="250" height="82" rx="12" fill="#ffffff" stroke="#cfe5df"/>
+  <text x="446" y="533" fill="#1b2a2f" font-size="24" font-family="Segoe UI, Arial">OCR + Parsers</text>
+
+  <path d="M890 190h230" stroke="#0d7a6b" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="904" y="178" fill="#4d5f66" font-size="18" font-family="Segoe UI, Arial">Provider calls</text>
+
+  <rect x="860" y="120" width="300" height="360" rx="20" fill="#ffffff" stroke="#d8cdbb" stroke-width="2"/>
+  <text x="900" y="164" fill="#1b2a2f" font-size="28" font-family="Segoe UI, Arial">LLM Providers</text>
+
+  <rect x="890" y="190" width="240" height="70" rx="10" fill="#f5efe4" stroke="#d8cdbb"/>
+  <text x="968" y="234" fill="#1b2a2f" font-size="24" font-family="Segoe UI, Arial">OpenAI</text>
+
+  <rect x="890" y="280" width="240" height="70" rx="10" fill="#f5efe4" stroke="#d8cdbb"/>
+  <text x="962" y="324" fill="#1b2a2f" font-size="24" font-family="Segoe UI, Arial">Gemini</text>
+
+  <rect x="890" y="370" width="240" height="70" rx="10" fill="#eaf4f1" stroke="#b8ddd6"/>
+  <text x="966" y="414" fill="#1b2a2f" font-size="24" font-family="Segoe UI, Arial">Ollama</text>
+
+  <path d="M330 300v42" stroke="#0d7a6b" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="346" y="325" fill="#4d5f66" font-size="18" font-family="Segoe UI, Arial">HTTP + SSE</text>
+
+  <path d="M640 590h220" stroke="#0d7a6b" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="655" y="575" fill="#4d5f66" font-size="18" font-family="Segoe UI, Arial">MCP tools</text>
+
+  <rect x="860" y="535" width="300" height="92" rx="14" fill="#ffffff" stroke="#d8cdbb"/>
+  <text x="928" y="590" fill="#1b2a2f" font-size="24" font-family="Segoe UI, Arial">VS Code / Copilot</text>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#0d7a6b"/>
+    </marker>
+  </defs>
+</svg>

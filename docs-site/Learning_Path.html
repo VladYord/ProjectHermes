@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Hermes — RAG &amp; AI Agent Learning Path</title>
+  <style>
+    /* ── Base ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand:     #7c6fcd;
+      --brand-dk:  #5a4fb5;
+      --brand-lt:  #ede9fb;
+      --bg:        #0f0f13;
+      --surface:   #1a1a24;
+      --surface2:  #222230;
+      --border:    #2e2e42;
+      --text:      #e2e2ee;
+      --muted:     #888899;
+      --code-bg:   #12121a;
+      --green:     #4caf7d;
+      --amber:     #e6a817;
+      --red:       #e85d5d;
+      --blue:      #4a9eff;
+
+      --p1: #e85d5d;   /* Phase 1 accent */
+      --p2: #e6a817;   /* Phase 2 accent */
+      --p3: #4caf7d;   /* Phase 3 accent */
+      --p4: #4a9eff;   /* Phase 4 accent */
+      --p5: #c084fc;   /* Phase 5 accent */
+      --p6: #fb923c;   /* Phase 6 accent */
+      --p7: #22d3ee;   /* Phase 7 accent */
+      --p8: #a3e635;   /* Phase 8 accent */
+      --p9: #f472b6;   /* Phase 9 accent */
+      --p10:#fbbf24;   /* Phase 10 accent */
+      --p11:#34d399;   /* Phase 11 accent */
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    .layout { display: flex; min-height: 100vh; }
+
+    nav {
+      width: 260px;
+      min-width: 260px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 1.5rem 0;
+    }
+
+    nav .logo {
+      display: flex; align-items: center; gap: 0.6rem;
+      padding: 0 1.5rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    nav .logo-icon {
+      width: 36px; height: 36px; background: var(--brand);
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+    }
+    nav .logo-text { font-weight: 700; font-size: 1rem; line-height: 1.2; }
+    nav .logo-text small { display: block; color: var(--muted); font-size: 0.72rem; font-weight: 400; }
+
+    nav ul { list-style: none; padding: 1rem 0; }
+    nav ul li a {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.42rem 1.5rem;
+      color: var(--muted); text-decoration: none; font-size: 0.82rem;
+      transition: color 0.15s, background 0.15s;
+      border-left: 3px solid transparent;
+    }
+    nav ul li a:hover { color: var(--text); background: var(--surface2); }
+    nav ul li a.active { color: var(--brand); border-left-color: var(--brand); background: var(--brand-lt)10; }
+    nav ul li a .phase-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    nav .nav-section-label {
+      padding: 0.8rem 1.5rem 0.3rem;
+      font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    main {
+      flex: 1;
+      max-width: 900px;
+      padding: 3rem 3.5rem;
+    }
+
+    /* ── Typography ───────────────────────────────────────── */
+    h1 { font-size: 2rem; font-weight: 800; margin-bottom: 0.4rem; }
+    h2 { font-size: 1.35rem; font-weight: 700; margin: 3rem 0 1rem; }
+    h3 { font-size: 1.05rem; font-weight: 600; margin: 2rem 0 0.75rem; color: var(--text); }
+    h4 { font-size: 0.9rem; font-weight: 600; margin: 1.5rem 0 0.5rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    p { margin-bottom: 0.9rem; color: #c8c8dc; }
+    strong { color: var(--text); }
+    em { color: var(--muted); font-style: italic; }
+
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Hero ─────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #1a1330 0%, #1a1a24 50%, #12121a 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+    }
+    .hero h1 { background: linear-gradient(135deg, var(--brand), #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero .subtitle { color: var(--muted); margin-top: 0.5rem; font-size: 1rem; }
+    .meta-pills { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; }
+    .pill {
+      padding: 0.3rem 0.85rem; border-radius: 20px;
+      font-size: 0.78rem; font-weight: 500;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .pill.python { color: #4a9eff; border-color: #4a9eff40; background: #4a9eff10; }
+
+    /* ── How-to-use box ───────────────────────────────────── */
+    .how-to {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--brand);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .how-to h3 { margin-top: 0; color: var(--brand); }
+    .how-to ol { padding-left: 1.25rem; }
+    .how-to ol li { color: #c8c8dc; margin-bottom: 0.4rem; font-size: 0.9rem; }
+
+    /* ── Phase sections ───────────────────────────────────── */
+    .phase {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 2rem;
+      overflow: hidden;
+    }
+
+    .phase-header {
+      display: flex; align-items: center; gap: 1rem;
+      padding: 1.4rem 1.8rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .phase-number {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1rem; flex-shrink: 0;
+    }
+    .phase-meta { flex: 1; }
+    .phase-meta h2 { margin: 0 0 0.2rem; font-size: 1.15rem; }
+    .phase-meta .tagline { color: var(--muted); font-size: 0.83rem; }
+    .days-badge {
+      padding: 0.3rem 0.8rem; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+      background: var(--surface2); border: 1px solid var(--border);
+    }
+
+    .phase-body { padding: 1.8rem; }
+
+    /* phase accent colors */
+    .ph1 .phase-number { background: #e85d5d20; color: var(--p1); }
+    .ph1 .phase-header { border-left: 4px solid var(--p1); }
+    .ph2 .phase-number { background: #e6a81720; color: var(--p2); }
+    .ph2 .phase-header { border-left: 4px solid var(--p2); }
+    .ph3 .phase-number { background: #4caf7d20; color: var(--p3); }
+    .ph3 .phase-header { border-left: 4px solid var(--p3); }
+    .ph4 .phase-number { background: #4a9eff20; color: var(--p4); }
+    .ph4 .phase-header { border-left: 4px solid var(--p4); }
+    .ph5 .phase-number { background: #c084fc20; color: var(--p5); }
+    .ph5 .phase-header { border-left: 4px solid var(--p5); }
+    .ph6 .phase-number { background: #fb923c20; color: var(--p6); }
+    .ph6 .phase-header { border-left: 4px solid var(--p6); }
+    .ph7 .phase-number { background: #22d3ee20; color: var(--p7); }
+    .ph7 .phase-header { border-left: 4px solid var(--p7); }
+    .ph8 .phase-number { background: #a3e63520; color: var(--p8); }
+    .ph8 .phase-header { border-left: 4px solid var(--p8); }
+    .ph9 .phase-number { background: #f472b620; color: var(--p9); }
+    .ph9 .phase-header { border-left: 4px solid var(--p9); }
+    .ph10 .phase-number { background: #fbbf2420; color: var(--p10); }
+    .ph10 .phase-header { border-left: 4px solid var(--p10); }
+    .ph11 .phase-number { background: #34d39920; color: var(--p11); }
+    .ph11 .phase-header { border-left: 4px solid var(--p11); }
+
+    /* ── Code blocks ──────────────────────────────────────── */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem 1.5rem;
+      overflow-x: auto;
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      margin: 1rem 0 1.25rem;
+    }
+    code {
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      font-size: 0.83em;
+    }
+    p code, li code {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 4px; padding: 0.1em 0.4em; color: #c084fc;
+    }
+
+    /* keyword colors in code blocks */
+    .kw { color: #c084fc; }
+    .fn { color: #4a9eff; }
+    .st { color: #4caf7d; }
+    .cm { color: #555570; }
+    .nb { color: #e6a817; }
+    .cl { color: #f472b6; }
+
+    /* ── Study file chip ──────────────────────────────────── */
+    .study-chip {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 0.5rem 1rem;
+      font-size: 0.82rem; margin-bottom: 1.2rem; color: var(--muted);
+    }
+    .study-chip .icon { color: var(--brand); }
+    .study-chip code { background: none; border: none; padding: 0; color: var(--brand); }
+
+    /* ── Tables ───────────────────────────────────────────── */
+    table {
+      width: 100%; border-collapse: collapse;
+      margin: 1rem 0 1.5rem; font-size: 0.85rem;
+    }
+    th {
+      text-align: left; padding: 0.6rem 1rem;
+      background: var(--surface2); color: var(--muted);
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.6rem 1rem; border-bottom: 1px solid var(--border)80;
+      vertical-align: top; color: #c8c8dc;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2)80; }
+    td code { font-size: 0.8rem; }
+
+    /* ── Callout boxes ────────────────────────────────────── */
+    .callout {
+      border-radius: 8px; padding: 1rem 1.25rem;
+      margin: 1rem 0; font-size: 0.88rem;
+      border-left: 4px solid;
+    }
+    .callout.info { background: #4a9eff10; border-color: var(--blue); color: #a8c8f8; }
+    .callout.warn { background: #e6a81710; border-color: var(--amber); color: #f0d080; }
+    .callout.tip  { background: #4caf7d10; border-color: var(--green); color: #90d8a8; }
+    .callout.note { background: #c084fc10; border-color: var(--brand); color: #d9c8ff; }
+    .callout.danger { background: #e85d5d10; border-color: var(--red); color: #f0a0a0; }
+    .callout strong { color: inherit; }
+
+    /* ── Outcome badge ────────────────────────────────────── */
+    .outcome {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      background: linear-gradient(135deg, var(--brand)10, transparent);
+      border: 1px solid var(--brand)40;
+      border-radius: 8px; padding: 1rem 1.25rem;
+      margin-top: 1.5rem; font-size: 0.88rem;
+    }
+    .outcome .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.05rem; }
+    .outcome p { margin: 0; color: #d0c8f8; }
+
+    /* ── Failure mode table ───────────────────────────────── */
+    .fail-table td:first-child { color: var(--red); font-weight: 600; }
+    .fail-table td:nth-child(4) { color: var(--green); }
+
+    /* ── Timeline table ───────────────────────────────────── */
+    .timeline td:last-child { color: var(--muted); }
+    .blocking-yes { color: var(--red) !important; }
+    .blocking-no  { color: var(--green) !important; }
+
+    /* ── File reference table ─────────────────────────────── */
+    .file-ref td:first-child { color: var(--amber); font-weight: 600; }
+    .file-ref td:nth-child(2) code { color: #4a9eff; }
+
+    /* ── ul / ol ──────────────────────────────────────────── */
+    ul, ol { padding-left: 1.4rem; margin-bottom: 0.9rem; }
+    li { margin-bottom: 0.35rem; color: #c8c8dc; }
+    li strong { color: var(--text); }
+
+    /* ── Divider ──────────────────────────────────────────── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+    /* ── Responsive ───────────────────────────────────────── */
+    @media (max-width: 900px) {
+      nav { display: none; }
+      main { padding: 2rem 1.5rem; }
+    }
+
+    /* ── Scrollbar ────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--brand); }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+<!-- ── Sidebar Nav ───────────────────────────────────────────── -->
+<nav>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div class="logo-text">Hermes
+      <small>Learning Path</small>
+    </div>
+  </div>
+  <ul>
+    <li class="nav-section-label">Project Context</li>
+    <li><a href="#overview"><span class="phase-dot" style="background:var(--brand)"></span>Overview</a></li>
+    <li><a href="#uses"><span class="phase-dot" style="background:var(--blue)"></span>How Hermes Is Used</a></li>
+    <li><a href="#tauri"><span class="phase-dot" style="background:var(--p5)"></span>What Tauri Does</a></li>
+    <li><a href="#ui-api"><span class="phase-dot" style="background:var(--p6)"></span>Svelte UI → APIs</a></li>
+    <li class="nav-section-label">Foundations</li>
+    <li><a href="#phase1"><span class="phase-dot" style="background:var(--p1)"></span>1 · Why RAG Exists</a></li>
+    <li><a href="#phase2"><span class="phase-dot" style="background:var(--p2)"></span>2 · ChromaDB</a></li>
+    <li><a href="#phase3"><span class="phase-dot" style="background:var(--p3)"></span>3 · Chunking</a></li>
+    <li><a href="#phase4"><span class="phase-dot" style="background:var(--p4)"></span>4 · RAG Pattern</a></li>
+    <li class="nav-section-label">Orchestration</li>
+    <li><a href="#phase5"><span class="phase-dot" style="background:var(--p5)"></span>5 · LangChain</a></li>
+    <li class="nav-section-label">Serving</li>
+    <li><a href="#phase6"><span class="phase-dot" style="background:var(--p6)"></span>6 · FastAPI</a></li>
+    <li><a href="#phase7"><span class="phase-dot" style="background:var(--p7)"></span>7 · Pydantic</a></li>
+    <li class="nav-section-label">Runtime</li>
+    <li><a href="#phase8"><span class="phase-dot" style="background:var(--p8)"></span>8 · Ollama (Local LLMs)</a></li>
+    <li><a href="#phase9"><span class="phase-dot" style="background:var(--p9)"></span>9 · MCP Protocol</a></li>
+    <li class="nav-section-label">Advanced</li>
+    <li><a href="#phase10"><span class="phase-dot" style="background:var(--p10)"></span>10 · Advanced RAG</a></li>
+    <li><a href="#phase11"><span class="phase-dot" style="background:var(--p11)"></span>11 · Tools, Agents &amp; Orchestration</a></li>
+    <li class="nav-section-label">Reference</li>
+    <li><a href="#files">📂 Files to Study</a></li>
+    <li><a href="#timeline">🗓 Timeline</a></li>
+  </ul>
+</nav>
+
+<!-- ── Main Content ──────────────────────────────────────────── -->
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <h1>RAG, Desktop AI &amp; Agent Learning Path</h1>
+    <p class="subtitle">Project Hermes — original privacy-first vision, current Tauri desktop implementation, and the real files that make it work</p>
+    <div class="meta-pills">
+      <span class="pill python">✓ Python assumed</span>
+      <span class="pill">Current stack: Tauri + Svelte + FastAPI sidecar</span>
+      <span class="pill">Plan phases 0-6 complete</span>
+      <span class="pill">~37 days total</span>
+      <span class="pill">11 phases</span>
+      <span class="pill">Phases are ordered — follow in sequence</span>
+    </div>
+  </div>
+
+  <!-- How to use -->
+  <div class="how-to">
+    <h3>📖 How to Use This Guide</h3>
+    <ol>
+      <li>Follow phases <strong>in order</strong> — each one builds directly on the previous</li>
+      <li>For each phase, <strong>build a small script first</strong> before reading the Hermes source file</li>
+      <li>Every <em>Study in Hermes</em> chip links to the exact file where that concept lives in the project</li>
+      <li>Skipping ahead is only safe for Phases 6–7; all others have hard sequential dependencies</li>
+    </ol>
+  </div>
+
+  <h2 id="overview">Current Implementation Snapshot</h2>
+  <p><strong>Vision.md</strong> describes the original Hermes idea correctly: a privacy-first assistant that lets you chat with your own documents. What changed is the delivery model. The early MVP vision used a browser-style Next.js frontend, but the implemented product described in <strong>doc/plan</strong> is now a <strong>Tauri desktop application</strong> with a <strong>Svelte frontend</strong>, a <strong>Python FastAPI backend sidecar</strong>, and local storage for vectors, sessions, and encrypted settings.</p>
+
+  <div class="callout info"><strong>Current status from the plan overview:</strong> Phases 0 through 6 are done. That means the desktop shell, backend hardening, chat UI, document manager, settings UI, Tauri integration, and the PyInstaller/Tauri build pipeline are implemented. CI/CD and the GitHub Pages landing site are still future work.</div>
+
+  <table>
+    <thead><tr><th>Area</th><th>Original Vision</th><th>Current Implementation</th></tr></thead>
+    <tbody>
+      <tr><td>Frontend</td><td>Next.js browser app</td><td>Svelte 5 app inside a Tauri WebView</td></tr>
+      <tr><td>Runtime</td><td>Separate frontend and backend processes started manually</td><td>Tauri shell starts the Python sidecar automatically and bridges the dynamic port into the UI</td></tr>
+      <tr><td>Backend</td><td>FastAPI + LangChain + ChromaDB</td><td>Still FastAPI + LangChain + ChromaDB, now with SQLite session memory, encrypted app config, and MCP support</td></tr>
+      <tr><td>Packaging</td><td>Run locally with developer tooling</td><td>PyInstaller sidecar bundled into Tauri installers for Windows desktop use</td></tr>
+      <tr><td>User experience</td><td>Web chat with one ingested document</td><td>Desktop knowledge workspace with chat, document ingestion, provider settings, session history, and native file dialogs</td></tr>
+    </tbody>
+  </table>
+
+  <table>
+    <thead><tr><th>Plan Phase</th><th>Status</th><th>What it means in practice</th></tr></thead>
+    <tbody>
+      <tr><td>0–4</td><td>Implemented</td><td>Project scaffold, backend services, chat UI, document manager, and settings all exist in the repo</td></tr>
+      <tr><td>5</td><td>Implemented</td><td>Tauri launches the Python sidecar, receives <code>PORT=XXXX</code>, exposes a native dialog, and closes the sidecar on exit</td></tr>
+      <tr><td>6</td><td>Implemented</td><td>PyInstaller builds the backend executable, then it is copied into Tauri resources and packaged into installers</td></tr>
+      <tr><td>7–8</td><td>Not started</td><td>Release automation and the public docs/landing site are not yet part of the active product surface</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout note"><strong>Important implementation update:</strong> the current build pipeline no longer writes the PyInstaller output directly into <code>src-tauri/resources</code>. It first builds into <code>backend/dist</code> and then copies the sidecar into Tauri resources. This avoids Windows file-locking failures during packaging.</div>
+
+  <h2 id="uses">How Hermes Can Be Used</h2>
+  <p>Hermes is not just a demo of RAG plumbing. In its current form it can already be used as a practical local-first knowledge tool in several ways:</p>
+  <ul>
+    <li><strong>Personal knowledge assistant</strong> — ingest PDFs, markdown notes, text files, code files, and OCR-capable images, then ask questions across them from one chat window</li>
+    <li><strong>Engineering or operations reference app</strong> — keep manuals, specs, runbooks, and code snippets in one searchable desktop workspace</li>
+    <li><strong>Model comparison workbench</strong> — switch between Ollama, OpenAI, Gemini, and Azure OpenAI from the Settings panel without changing the rest of the app</li>
+    <li><strong>Private desktop AI tool</strong> — with Ollama it can run as a mostly local document assistant instead of forcing every request through a browser SaaS flow</li>
+    <li><strong>Reusable backend for editors and assistants</strong> — the same knowledge and chat services can be exposed through MCP so tools like VS Code can query Hermes directly</li>
+  </ul>
+
+  <h2 id="tauri">What Tauri Is and What It Does Here</h2>
+  <p><strong>Tauri</strong> is a desktop application framework that combines a native Rust shell with a web frontend rendered in the operating system's WebView. In Hermes, Tauri is not the AI layer. It is the <strong>desktop host</strong> that packages and coordinates the UI and backend.</p>
+
+  <table>
+    <thead><tr><th>Tauri responsibility in Hermes</th><th>Concrete implementation</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td>Hosts the desktop UI</td><td><code>src-tauri/src/lib.rs</code> starts the app and loads the Svelte UI in a Tauri window</td><td>The app behaves like a native desktop program instead of a browser tab</td></tr>
+      <tr><td>Starts the Python backend sidecar</td><td><code>spawn_backend()</code> launches <code>hermes-server</code> with <code>--port 0 --packaged</code></td><td>No separate terminal is needed for end users</td></tr>
+      <tr><td>Bridges runtime state to the UI</td><td>Tauri exposes <code>get_backend_port</code> and emits the <code>backend-ready</code> event</td><td>The Svelte app learns which local port the backend chose at runtime</td></tr>
+      <tr><td>Provides desktop-native capabilities</td><td>The UI uses the Tauri dialog plugin for file picking and shell/event APIs for platform integration</td><td>Document ingestion and external links feel like a desktop app, not a browser workaround</td></tr>
+      <tr><td>Owns desktop packaging</td><td>Tauri bundle output creates the MSI and setup EXE installers</td><td>Hermes can be installed on Windows without requiring Python or Node.js</td></tr>
+      <tr><td>Stops background processes on exit</td><td>The Rust shell stores the child handle and kills the sidecar during shutdown</td><td>Prevents orphaned backend processes after the window closes</td></tr>
+    </tbody>
+  </table>
+
+  <pre>┌──────────────────────────── Tauri Desktop Shell ────────────────────────────┐
+│                                                                              │
+│  Svelte UI (WebView)                                                         │
+│    App.svelte                                                                │
+│      │                                                                       │
+│      ├─ initBackend() ── invoke(get_backend_port) / listen(backend-ready)    │
+│      │                                                                       │
+│      ├─ ChatWindow.svelte        -> POST /api/chat (SSE)                     │
+│      ├─ ChatSidebar.svelte       -> /api/sessions                            │
+│      ├─ DocumentManager.svelte   -> /api/documents, /api/ingest             │
+│      └─ SettingsPanel.svelte     -> /api/config, /api/providers             │
+│                                                                              │
+├──────────────────────────── Python FastAPI Sidecar ──────────────────────────┤
+│                                                                              │
+│  hermes/server.py                                                            │
+│    ├─ /api/chat                                                              │
+│    ├─ /api/ingest and /api/ingest/upload                                     │
+│    ├─ /api/documents                                                         │
+│    ├─ /api/sessions                                                          │
+│    └─ /api/config and /api/providers                                         │
+│                                                                              │
+├───────────────────────────── Local Data Services ────────────────────────────┤
+│  ChromaDB for document chunks  |  SQLite for session memory                 │
+│  Encrypted config file         |  Local or cloud LLM providers              │
+└──────────────────────────────────────────────────────────────────────────────┘</pre>
+
+  <pre>Tauri window
+    │
+    ├─ renders the Svelte UI
+    ├─ spawns hermes-server as a sidecar
+    ├─ waits for stdout: PORT=12345
+    ├─ emits backend-ready { port: 12345 }
+    └─ kills the sidecar when the app exits</pre>
+
+  <h2 id="ui-api">Which Svelte UI Calls Which Hermes API</h2>
+  <p>The frontend is a single Svelte app, but each visible panel maps to a distinct store and backend surface. Reading these flows makes the product easier to reason about than studying endpoints in isolation.</p>
+
+  <table>
+    <thead><tr><th>Svelte UI surface</th><th>Frontend code path</th><th>Hermes API / Tauri API used</th><th>What the user is doing</th></tr></thead>
+    <tbody>
+      <tr><td><code>App.svelte</code> startup splash</td><td><code>initBackend()</code> in <code>ui/src/lib/backend.svelte.ts</code></td><td>Tauri <code>invoke('get_backend_port')</code>, Tauri <code>backend-ready</code> event, then <code>GET /api/health</code></td><td>Opening the app and waiting for the backend sidecar to become reachable</td></tr>
+      <tr><td><code>ChatWindow.svelte</code></td><td><code>chatStore.sendMessage()</code> → <code>streamChat()</code></td><td><code>POST /api/chat</code> with <code>stream: true</code> over SSE</td><td>Sending a user message and receiving the assistant response token by token</td></tr>
+      <tr><td><code>ChatSidebar.svelte</code></td><td><code>loadSessions()</code>, <code>setActiveSession()</code>, <code>deleteSession()</code></td><td><code>GET /api/sessions</code>, <code>GET /api/sessions/{session_id}/history</code>, <code>DELETE /api/sessions/{session_id}</code></td><td>Browsing prior chats, reopening a conversation, or deleting one</td></tr>
+      <tr><td><code>DocumentManager.svelte</code></td><td><code>docStore.refreshDocuments()</code></td><td><code>GET /api/documents</code></td><td>Opening the knowledge-base panel and listing all ingested documents</td></tr>
+      <tr><td><code>UploadButton.svelte</code> in packaged desktop mode</td><td>Tauri <code>dialog.open()</code> → <code>docStore.ingestByPath()</code></td><td>Tauri dialog plugin, then <code>POST /api/ingest</code></td><td>Selecting local files via a native file picker and asking the backend to read them from disk</td></tr>
+      <tr><td><code>UploadButton.svelte</code> in browser/dev mode</td><td>HTML file input → <code>docStore.uploadAndIngest()</code></td><td><code>POST /api/ingest/upload</code></td><td>Uploading file bytes directly to the backend when running outside packaged Tauri mode</td></tr>
+      <tr><td><code>DocumentCard.svelte</code></td><td><code>docStore.removeDocument()</code></td><td><code>DELETE /api/documents/{document_id}</code></td><td>Removing a document and its indexed chunks from the knowledge base</td></tr>
+      <tr><td><code>SettingsPanel.svelte</code></td><td><code>configStore.load()</code> and <code>configStore.refreshProviders()</code></td><td><code>GET /api/config</code>, <code>GET /api/providers</code>, <code>GET /api/health</code></td><td>Opening settings, checking provider health, and loading backend version info</td></tr>
+      <tr><td><code>ProviderCard.svelte</code></td><td><code>saveProvider()</code>, <code>setDefaultProvider()</code>, <code>testProviderChat()</code></td><td><code>PATCH /api/config</code>, <code>POST /api/chat</code> with a non-streaming test prompt</td><td>Saving API keys or models, changing the default provider, and verifying chat connectivity</td></tr>
+      <tr><td><code>EmbeddingConfig.svelte</code></td><td><code>setEmbeddingProvider()</code> and provider-specific saves</td><td><code>PATCH /api/config</code></td><td>Changing the embedding provider or embedding model used by the knowledge base</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip"><strong>Useful reading pattern:</strong> if you want to understand a user-facing feature, start from the Svelte component, jump to its store, then to the API wrapper, and only then read the corresponding FastAPI endpoint. Hermes is organized cleanly enough that this path stays local and predictable.</div>
+
+  <!-- ── Phase 1 ─────────────────────────────────────────── -->
+  <div class="phase ph1" id="phase1">
+    <div class="phase-header">
+      <div class="phase-number">1</div>
+      <div class="phase-meta">
+        <h2>Why RAG Exists</h2>
+        <div class="tagline">Concepts only — no tools yet. Build the mental model first.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p1);border-color:var(--p1)40">2–3 days</div>
+    </div>
+    <div class="phase-body">
+
+      <h3>1.1 How LLMs Work</h3>
+      <ul>
+        <li><strong>Tokens &amp; context windows</strong> — A model cannot read your entire hard drive. It has a fixed context limit (4K–200K tokens). This is why RAG exists at all.</li>
+        <li><strong>Hallucination</strong> — Structurally inevitable: the model generates the statistically likely next token, not a verified fact. RAG fixes this by providing verified context.</li>
+        <li><strong>Message structure</strong> — Every LLM call is a list: System → Human → Assistant → Human → … This is exactly what <code>HumanMessage</code>, <code>AIMessage</code> in <code>agent.py</code> represent.</li>
+        <li><strong>Temperature</strong> — 0 = deterministic (facts); 1 = creative (storytelling).</li>
+      </ul>
+
+      <h3>1.2 What an Embedding Is</h3>
+      <p>A sentence converted to a list of floats (e.g., 384 numbers). Semantically similar texts produce numerically similar vectors. Similarity = cosine of the angle between two vectors.</p>
+      <pre><span class="kw">from</span> sentence_transformers <span class="kw">import</span> SentenceTransformer
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+
+model = SentenceTransformer(<span class="st">"all-MiniLM-L6-v2"</span>)
+a = model.encode(<span class="st">"The cat sat on the mat"</span>)
+b = model.encode(<span class="st">"A cat rested on a rug"</span>)
+c = model.encode(<span class="st">"The stock market fell 3%"</span>)
+
+<span class="kw">def</span> <span class="fn">cosine</span>(x, y): <span class="kw">return</span> np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
+
+<span class="nb">print</span>(cosine(a, b))  <span class="cm"># ~0.85 — similar</span>
+<span class="nb">print</span>(cosine(a, c))  <span class="cm"># ~0.12 — dissimilar</span></pre>
+
+      <h3>1.3 Vector Similarity Search</h3>
+      <ul>
+        <li>Brute-force dot-product over millions of vectors is too slow</li>
+        <li><strong>HNSW</strong> (Hierarchical Navigable Small World) — the graph-based index ChromaDB uses internally for fast Approximate Nearest Neighbor search</li>
+        <li>"Approximate" is fine for RAG — being 5% wrong on retrieval is irrelevant compared to the quality gains</li>
+        <li>In <code>knowledge_service.py</code> you see <code>{"hnsw:space": "cosine"}</code> — this selects cosine similarity as the distance metric</li>
+      </ul>
+
+      <div class="outcome">
+        <div class="icon">✅</div>
+        <p><strong>Outcome:</strong> You understand <em>why</em> the whole system exists. Every tool you learn next has a clear purpose.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Phase 2 ─────────────────────────────────────────── -->
+  <div class="phase ph2" id="phase2">
+    <div class="phase-header">
+      <div class="phase-number">2</div>
+      <div class="phase-meta">
+        <h2>The Data Layer: ChromaDB</h2>
+        <div class="tagline">The right first tool — simplest persistent vector DB, exactly what Hermes uses.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p2);border-color:var(--p2)40">3–4 days</div>
+    </div>
+    <div class="phase-body">
+      <div class="study-chip"><span class="icon">📄</span>Study in Hermes: <code>hermes/services/knowledge_service.py</code></div>
+
+      <h3>2.1 Core Concepts</h3>
+      <pre><span class="kw">import</span> chromadb
+
+<span class="cm"># Persistent — survives process restart (what Hermes uses)</span>
+client = chromadb.PersistentClient(path=<span class="st">"./data/chromadb"</span>)
+
+<span class="cm"># Ephemeral — in-memory only, for tests</span>
+client = chromadb.EphemeralClient()
+
+<span class="cm"># A collection is like a "table" for vectors</span>
+collection = client.get_or_create_collection(
+    name=<span class="st">"my_knowledge"</span>,
+    metadata={<span class="st">"hnsw:space"</span>: <span class="st">"cosine"</span>}
+)</pre>
+
+      <h3>2.2 The Four Operations</h3>
+      <pre><span class="cm"># ADD</span>
+collection.add(
+    ids=[<span class="st">"chunk_0"</span>, <span class="st">"chunk_1"</span>],
+    documents=[<span class="st">"text of chunk 0"</span>, <span class="st">"text of chunk 1"</span>],
+    metadatas=[{<span class="st">"source"</span>: <span class="st">"file.pdf"</span>}, {<span class="st">"source"</span>: <span class="st">"file.pdf"</span>}]
+)
+<span class="cm"># QUERY — semantic search</span>
+results = collection.query(query_texts=[<span class="st">"what is machine learning?"</span>], n_results=<span class="nb">5</span>)
+<span class="cm"># DELETE — by metadata filter</span>
+collection.delete(where={<span class="st">"source"</span>: <span class="st">"file.pdf"</span>})
+<span class="cm"># GET — by id</span>
+collection.get(ids=[<span class="st">"chunk_0"</span>])</pre>
+
+      <h3>2.3 Embedding Functions + Current Limitation</h3>
+      <p>Hermes uses a <code>_HashEmbeddingFunction</code> (SHA-256 hash → 384 floats) as a no-download fallback. <strong>This is the biggest current limitation</strong> — hash similarity is not semantic.</p>
+      <div class="callout warn">⚠️ <strong>Phase 8 upgrade:</strong> Replace with <code>OllamaEmbeddingFunction(model_name="nomic-embed-text")</code> once Ollama is installed. Same model must be used at ingest time AND query time.</div>
+
+      <h3>2.4 ChromaDB vs. Other Vector Databases</h3>
+      <table>
+        <thead><tr><th>Database</th><th>Type</th><th>Best For</th></tr></thead>
+        <tbody>
+          <tr><td><strong>ChromaDB</strong> ← Hermes</td><td>Local embedded</td><td>Local-first apps, rapid prototyping</td></tr>
+          <tr><td>Qdrant</td><td>Local or cloud server</td><td>Production, rich filtering</td></tr>
+          <tr><td>Weaviate</td><td>Cloud / self-hosted</td><td>Graph features, large scale</td></tr>
+          <tr><td>Pinecone</td><td>Cloud-only SaaS</td><td>Fully managed, no infra</td></tr>
+          <tr><td>pgvector</td><td>Postgres extension</td><td>Teams already on Postgres</td></tr>
+          <tr><td>FAISS</td><td>Local library</td><td>Research, no persistence needed</td></tr>
+        </tbody>
+      </table>
+
+      <div class="outcome">
+        <div class="icon">✅</div>
+        <p><strong>Outcome:</strong> You can explain every line in <code>KnowledgeService</code> — ingest, search, delete, metadata.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Phase 3 ─────────────────────────────────────────── -->
+  <div class="phase ph3" id="phase3">
+    <div class="phase-header">
+      <div class="phase-number">3</div>
+      <div class="phase-meta">
+        <h2>Chunking: The Hidden Skill</h2>
+        <div class="tagline">Chunking quality is the single biggest factor in RAG answer quality. Most tutorials skip this.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p3);border-color:var(--p3)40">2 days</div>
+    </div>
+    <div class="phase-body">
+      <div class="study-chip"><span class="icon">📄</span>Study in Hermes: <code>hermes/processing/chunking.py</code> · <code>hermes/processing/pipeline.py</code></div>
+
+      <h3>3.1 Why Chunking Matters</h3>
+      <ul>
+        <li>LLMs have context limits — you cannot paste a 300-page book into a prompt</li>
+        <li>A <strong>chunk</strong> is the atomic unit of retrieval — if the answer spans two chunks neither of which is retrieved, the LLM cannot answer</li>
+        <li>Too large → noisy context, lower similarity scores. Too small → incomplete context, answer cut mid-sentence</li>
+      </ul>
+
+      <h3>3.2 RecursiveCharacterTextSplitter — What Hermes Uses</h3>
+      <pre><span class="kw">from</span> langchain_text_splitters <span class="kw">import</span> RecursiveCharacterTextSplitter
+
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=<span class="nb">1000</span>,     <span class="cm"># characters per chunk (from config.yaml)</span>
+    chunk_overlap=<span class="nb">200</span>,   <span class="cm"># overlap — preserves context across boundaries</span>
+    separators=[<span class="st">"\n\n"</span>, <span class="st">"\n"</span>, <span class="st">". "</span>, <span class="st">" "</span>, <span class="st">""</span>]  <span class="cm"># tries largest first, falls back</span>
+)</pre>
+      <p>The <strong>overlap</strong> is critical: if an answer straddles a chunk boundary, the 200-character overlap ensures both adjacent chunks contain enough context to be useful individually.</p>
+
+      <h3>3.3 Chunking Strategies by Document Type</h3>
+      <table>
+        <thead><tr><th>Document Type</th><th>Strategy</th><th>Hermes Implementation</th></tr></thead>
+        <tbody>
+          <tr><td>Plain text</td><td>Character splitter</td><td><code>TextParser</code> → <code>chunk_text()</code></td></tr>
+          <tr><td>Markdown</td><td>Split on headings, then character</td><td><code>MarkdownParser</code> → <code>chunk_text()</code></td></tr>
+          <tr><td>PDF</td><td>Page-by-page, then character</td><td><code>PDFParser</code> (PyMuPDF) → <code>chunk_text()</code></td></tr>
+          <tr><td>DOCX</td><td>Paragraph-by-paragraph</td><td><code>DocxParser</code> (python-docx) → <code>chunk_text()</code></td></tr>
+          <tr><td>Code</td><td>Function/class boundaries</td><td><code>CodeParser</code> → <code>chunk_text()</code></td></tr>
+          <tr><td>Images</td><td>OCR → text → character</td><td><code>OCRParser</code> (Tesseract) → <code>chunk_text()</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="outcome">
+        <div class="icon">✅</div>
+        <p><strong>Outcome:</strong> You understand why RAG answers can be bad even with a perfect LLM — it's almost always the chunking.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Phase 4 ─────────────────────────────────────────── -->
+  <div class="phase ph4" id="phase4">
+    <div class="phase-header">
+      <div class="phase-number">4</div>
+      <div class="phase-meta">
+        <h2>The RAG Pattern End-to-End</h2>
+        <div class="tagline">Wire all components manually before using LangChain. Seeing it raw makes every abstraction transparent.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p4);border-color:var(--p4)40">3–4 days</div>
+    </div>
+    <div class="phase-body">
+      <div class="study-chip"><span class="icon">📄</span>Study in Hermes: <code>hermes/tools/rag_search.py</code> · <code>hermes/services/knowledge_service.py</code></div>
+
+      <h3>4.1 Build RAG Without Any Framework</h3>
+      <p>Write this 40-line script from scratch <em>before</em> reading any Hermes code:</p>
+      <pre><span class="kw">import</span> chromadb, openai
+
+client = chromadb.EphemeralClient()
+collection = client.create_collection(<span class="st">"test"</span>)
+collection.add(ids=[<span class="st">"1"</span>,<span class="st">"2"</span>], documents=[
+    <span class="st">"Python lists are ordered"</span>,
+    <span class="st">"Dicts store key-value pairs"</span>
+])
+
+<span class="cm"># Step 1: Retrieve relevant chunks</span>
+results = collection.query(query_texts=[<span class="st">"how do I store ordered items?"</span>], n_results=<span class="nb">2</span>)
+chunks = results[<span class="st">"documents"</span>][<span class="nb">0</span>]
+
+<span class="cm"># Step 2: Build prompt with context</span>
+context = <span class="st">"\n\n"</span>.join(chunks)
+prompt = <span class="st">f"Answer based ONLY on this context:\n\n{context}\n\nQuestion: How do I store ordered items in Python?"</span>
+
+<span class="cm"># Step 3: Call LLM</span>
+response = openai.chat.completions.create(
+    model=<span class="st">"gpt-4o"</span>,
+    messages=[{<span class="st">"role"</span>: <span class="st">"user"</span>, <span class="st">"content"</span>: prompt}]
+)
+<span class="nb">print</span>(response.choices[<span class="nb">0</span>].message.content)</pre>
+
+      <h3>4.2 The Retriever–Reader Architecture</h3>
+      <p>Every RAG system has exactly two stages:</p>
+      <pre><span class="cm">User Question
+     │
+     ▼
+┌─────────────┐
+│  RETRIEVER  │  → Embed question → Query ChromaDB → Return top-k chunks
+│  (ChromaDB) │
+└──────┬──────┘
+       │ relevant text chunks
+       ▼
+┌─────────────┐
+│   READER    │  → Build prompt (question + chunks) → Call LLM → Return answer
+│    (LLM)    │
+└─────────────┘
+       │
+       ▼
+  Answer + Sources</span></pre>
+
+      <h3>4.3 Why RAG Fails — The Three Diagnoses</h3>
+      <table class="fail-table">
+        <thead><tr><th>Failure</th><th>Symptom</th><th>Root Cause</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>Retrieval miss</td><td>Answer is in docs but LLM says "not found"</td><td>Bad chunking or weak embeddings</td><td>Better chunking + semantic embeddings</td></tr>
+          <tr><td>Context overload</td><td>LLM gives confused answer despite retrieving</td><td>Too many chunks in prompt</td><td>Reduce top_k, add re-ranking</td></tr>
+          <tr><td>Ignore context</td><td>LLM hallucination despite correct retrieval</td><td>System prompt too weak</td><td>Stronger system prompt, temperature=0</td></tr>
+        </tbody>
+      </table>
+
+      <div class="outcome">
+        <div class="icon">✅</div>
+        <p><strong>Outcome:</strong> You can explain every line in <code>rag_search.py</code> and <code>knowledge_service.search()</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Phase 5 ─────────────────────────────────────────── -->
+  <div class="phase ph5" id="phase5">
+    <div class="phase-header">
+      <div class="phase-number">5</div>
+      <div class="phase-meta">
+        <h2>LangChain</h2>
+        <div class="tagline">The orchestration glue. Learn it after you understand what it's gluing together.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p5);border-color:var(--p5)40">5–6 days</div>
+    </div>
+    <div class="phase-body">
+      <div class="study-chip"><span class="icon">📄</span>Study in Hermes: <code>hermes/core/agent.py</code> · <code>hermes/core/llm_router.py</code> · <code>hermes/services/chat_service.py</code></div>
+
+      <h3>5.1 BaseChatModel — Swappable Providers</h3>
+      <pre><span class="kw">from</span> langchain_ollama <span class="kw">import</span> ChatOllama
+<span class="kw">from</span> langchain_openai <span class="kw">import</span> ChatOpenAI
+<span class="kw">from</span> langchain_google_genai <span class="kw">import</span> ChatGoogleGenerativeAI
+
+<span class="cm"># All three are BaseChatModel — identical interface</span>
+llm = ChatOllama(model=<span class="st">"llama3.1"</span>, base_url=<span class="st">"http://localhost:11434"</span>)
+llm = ChatOpenAI(model=<span class="st">"gpt-4o"</span>, api_key=<span class="st">"sk-..."</span>)
+llm = ChatGoogleGenerativeAI(model=<span class="st">"gemini-pro"</span>, google_api_key=<span class="st">"..."</span>)</pre>
+
+      <h3>5.2 The <code>@tool</code> Decorator</h3>
+      <p>The docstring becomes the tool description the LLM sees. The type hints become the JSON schema.</p>
+      <pre><span class="kw">from</span> langchain_core.tools <span class="kw">import</span> tool
+
+<span class="kw">def</span> <span class="fn">create_rag_search_tool</span>(knowledge):
+    <span class="cm"># Factory — closes over knowledge service instance</span>
+    @tool
+    <span class="kw">def</span> <span class="fn">search_knowledge_base</span>(query: <span class="cl">str</span>, top_k: <span class="cl">int</span> = <span class="nb">5</span>) -> <span class="cl">str</span>:
+        <span class="st">"""Search the local knowledge base for information relevant to the query.
+        Returns the most relevant text passages from ingested documents."""</span>
+        results = knowledge.search(query, top_k)
+        <span class="kw">return</span> format_results(results)
+    <span class="kw">return</span> search_knowledge_base</pre>
+
+      <h3>5.3 <code>create_agent</code> / LangGraph — The Agent Loop</h3>
+      <pre><span class="kw">from</span> langchain.agents <span class="kw">import</span> create_agent
+
+graph = create_agent(model=llm, tools=[rag_tool], system_prompt=<span class="st">"You are Hermes..."</span>)
+
+<span class="cm"># Non-streaming</span>
+result = <span class="kw">await</span> graph.ainvoke({<span class="st">"messages"</span>: [HumanMessage(content=<span class="st">"..."</span>)]})
+answer = result[<span class="st">"messages"</span>][-<span class="nb">1</span>].content
+
+<span class="cm"># Streaming — yields events token by token</span>
+<span class="kw">async for</span> event <span class="kw">in</span> graph.astream_events({<span class="st">"messages"</span>: [...]}, version=<span class="st">"v2"</span>):
+    <span class="kw">if</span> event[<span class="st">"event"</span>] == <span class="st">"on_chat_model_stream"</span>:
+        token = event[<span class="st">"data"</span>][<span class="st">"chunk"</span>].content
+        <span class="nb">print</span>(token, end=<span class="st">""</span>, flush=<span class="nb">True</span>)</pre>
+
+      <p><strong>The ReAct loop:</strong> LLM sees messages + tool schemas → decides to call tool or answer → if tool: LangGraph executes it, result appended as <code>ToolMessage</code> → LLM sees updated messages → final answer.</p>
+
+      <div class="callout danger">⚠️ <strong>LangChain version warning:</strong> This project uses LangChain ≥0.3 with <code>create_agent</code> (LangGraph-based). Older tutorials use the <strong>deprecated</strong> <code>AgentExecutor</code>. Filter out any tutorial using <code>initialize_agent()</code> or <code>AgentExecutor</code>.</div>
+
+      <h3>5.4 LangChain Package Map</h3>
+      <table>
+        <thead><tr><th>Package</th><th>Purpose</th><th>Used in Hermes</th></tr></thead>
+        <tbody>
+          <tr><td><code>langchain-core</code></td><td>Base classes (BaseChatModel, messages, tools)</td><td><code>agent.py</code>, <code>rag_search.py</code></td></tr>
+          <tr><td><code>langchain</code></td><td><code>create_agent</code>, utilities</td><td><code>agent.py</code></td></tr>
+          <tr><td><code>langchain-text-splitters</code></td><td><code>RecursiveCharacterTextSplitter</code></td><td><code>chunking.py</code></td></tr>
+          <tr><td><code>langchain-ollama</code></td><td><code>ChatOllama</code></td><td><code>llm_router.py</code></td></tr>
+          <tr><td><code>langchain-openai</code></td><td><code>ChatOpenAI</code></td><td><code>llm_router.py</code></td></tr>
+          <tr><td><code>langchain-google-genai</code></td><td><code>ChatGoogleGenerativeAI</code></td><td><code>llm_router.py</code></td></tr>
+        </tbody>
+      </table>
+
+      <div class="outcome">
+        <div class="icon">✅</div>
+        <p><strong>Outcome:</strong> You can explain every line in <code>agent.py</code>, <code>llm_router.py</code>, and <code>chat_service.py</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Phase 6 ─────────────────────────────────────────── -->
+  <div class="phase ph6" id="phase6">
+    <div class="phase-header">
+      <div class="phase-number">6</div>
+      <div class="phase-meta">
+        <h2>FastAPI</h2>
+        <div class="tagline">The serving layer. Endpoints are thin wrappers — learn the core logic first.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p6);border-color:var(--p6)40">3–4 days</div>
+    </div>
+    <div class="phase-body">
+      <div class="study-chip"><span class="icon">📄</span>Study in Hermes: <code>hermes/server.py</code> · <code>hermes/middleware/auth.py</code></div>
+
+      <h3>6.1 Lifespan Events</h3>
+      <pre><span class="kw">from</span> contextlib <span class="kw">import</span> asynccontextmanager
+
+@asynccontextmanager
+<span class="kw">async def</span> <span class="fn">lifespan</span>(app: FastAPI):
+    <span class="cm"># STARTUP — runs before first request</span>
+    _knowledge = KnowledgeService()
+    _chat_service = ChatService(_knowledge, ...)
+    <span class="kw">yield</span>
+    <span class="cm"># SHUTDOWN — cleanup here</span>
+
+app = FastAPI(lifespan=lifespan)</pre>
+      <p>Why not at module level? Avoids circular imports — <code>config.yaml</code> must load before any service reads it.</p>
+
+      <h3>6.2 SSE Streaming</h3>
+      <pre><span class="kw">from</span> fastapi.responses <span class="kw">import</span> StreamingResponse
+
+<span class="kw">async def</span> <span class="fn">token_generator</span>():
+    <span class="kw">async for</span> token <span class="kw">in</span> chat_service.chat_stream(message):
+        <span class="kw">yield</span> <span class="st">f"data: {json.dumps({'token': token})}\n\n"</span>
+    <span class="kw">yield</span> <span class="st">"data: [DONE]\n\n"</span>
+
+<span class="kw">return</span> StreamingResponse(token_generator(), media_type=<span class="st">"text/event-stream"</span>)</pre>
+      <p>SSE format: each event is <code>data: &lt;payload&gt;\n\n</code> (double newline required). The browser <code>EventSource</code> API reads this natively.</p>
+
+      <h3>6.3 Auth Middleware Flow</h3>
+      <p><code>auth.enabled=false</code> → all pass through | localhost → always passes | remote → requires <code>X-API-Key</code> header matching <code>config.yaml</code> value → 401 if wrong.</p>
+
+      <div class="outcome">
+        <div class="icon">✅</div>
+        <p><strong>Outcome:</strong> You can explain every endpoint and middleware in <code>hermes/server.py</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Phase 7 ─────────────────────────────────────────── -->
+  <div class="phase ph7" id="phase7">
+    <div class="phase-header">
+      <div class="phase-number">7</div>
+      <div class="phase-meta">
+        <h2>Pydantic</h2>
+        <div class="tagline">Already in use everywhere — this phase makes the patterns explicit.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p7);border-color:var(--p7)40">1–2 days</div>
+    </div>
+    <div class="phase-body">
+      <div class="study-chip"><span class="icon">📄</span>Study in Hermes: <code>hermes/models/api.py</code> · <code>hermes/config.py</code></div>
+
+      <h3>7.1 Pydantic v2 Models</h3>
+      <pre><span class="kw">from</span> pydantic <span class="kw">import</span> BaseModel, Field
+
+<span class="kw">class</span> <span class="cl">ChatRequest</span>(BaseModel):
+    message: <span class="cl">str</span>                      <span class="cm"># required</span>
+    session_id: <span class="cl">str</span> | <span class="kw">None</span> = <span class="kw">None</span>     <span class="cm"># optional</span>
+    provider: <span class="cl">str</span> | <span class="kw">None</span> = <span class="kw">None</span>
+    stream: <span class="cl">bool</span> = <span class="kw">False</span></pre>
+
+      <h3>7.2 Nested Config Models</h3>
+      <pre><span class="kw">class</span> <span class="cl">HermesConfig</span>(BaseModel):
+    server: <span class="cl">ServerConfig</span> = Field(default_factory=ServerConfig)
+    llm: <span class="cl">LLMConfig</span>       = Field(default_factory=LLMConfig)
+    <span class="cm"># Access: get_config().llm.providers.ollama.model</span>
+    <span class="cm"># Fully typed — IDE autocomplete works everywhere</span></pre>
+
+      <div class="outcome">
+        <div class="icon">✅</div>
+        <p><strong>Outcome:</strong> You understand every class in <code>models/api.py</code> and <code>config.py</code>.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Phase 8 ─────────────────────────────────────────── -->
+  <div class="phase ph8" id="phase8">
+    <div class="phase-header">
+      <div class="phase-number">8</div>
+      <div class="phase-meta">
+        <h2>Ollama: Running LLMs Locally</h2>
+        <div class="tagline">Makes Hermes fully local, private, and free. Also unlocks real semantic embeddings.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p8);border-color:var(--p8)40">1–2 days</div>
+    </div>
+    <div class="phase-body">
+      <div class="callout tip">📥 <strong>Install:</strong> Download Ollama from <strong>https://ollama.com/download</strong> then run <code>ollama serve</code>.</div>
+
+      <h3>8.1 Quick Start</h3>
+      <pre>ollama pull llama3.1           <span class="cm"># chat model (~4.7 GB, 8B Q4)</span>
+ollama pull nomic-embed-text   <span class="cm"># embedding model — CRITICAL upgrade for Hermes</span>
+
+<span class="cm"># Test it</span>
+curl http://localhost:11434/api/chat \
+  -d '{"model":"llama3.1","messages":[{"role":"user","content":"hello"}]}'</pre>
+
+      <h3>8.2 Model Selection for RAG</h3>
+      <table>
+        <thead><tr><th>Model</th><th>Size</th><th>Speed</th><th>RAG Quality</th></tr></thead>
+        <tbody>
+          <tr><td><code>llama3.1</code> (8B)</td><td>4.7 GB</td><td>Medium</td><td>★★★★ Recommended</td></tr>
+          <tr><td><code>llama3.1</code> (70B)</td><td>40 GB</td><td>Slow</td><td>★★★★★ If you have the hardware</td></tr>
+          <tr><td><code>mistral</code> (7B)</td><td>4.1 GB</td><td>Fast</td><td>★★★</td></tr>
+          <tr><td><code>nomic-embed-text</code></td><td>274 MB</td><td>Very fast</td><td>N/A — for embeddings only</td></tr>
+        </tbody>
+      </table>
+
+      <h3>8.3 Upgrading Hermes Embeddings (The Critical Fix)</h3>
+      <pre><span class="kw">from</span> chromadb.utils.embedding_functions <span class="kw">import</span> OllamaEmbeddingFunction
+
+<span class="cm"># Replace _HashEmbeddingFunction with this in knowledge_service.py:</span>
+ef = OllamaEmbeddingFunction(
+    url=<span class="st">"http://localhost:11434"</span>,
+    model_name=<span class="st">"nomic-embed-text"</span>
+)</pre>
+      <div class="callout warn">⚠️ <strong>Consistency rule:</strong> Re-ingest all documents after changing the embedding model — old embeddings are incompatible with new ones.</div>
+
+      <div class="outcome">
+        <div class="icon">✅</div>
+        <p><strong>Outcome:</strong> Hermes now does real semantic search. All previous phases are fully operational end-to-end.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Phase 9 ─────────────────────────────────────────── -->
+  <div class="phase ph9" id="phase9">
+    <div class="phase-header">
+      <div class="phase-number">9</div>
+      <div class="phase-meta">
+        <h2>MCP Protocol</h2>
+        <div class="tagline">VS Code Copilot integration — just a different transport for the same core logic.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p9);border-color:var(--p9)40">2–3 days</div>
+    </div>
+    <div class="phase-body">
+      <div class="study-chip"><span class="icon">📄</span>Study in Hermes: <code>hermes/mcp_server.py</code></div>
+
+      <h3>9.1 What MCP Is</h3>
+      <ul>
+        <li><strong>Model Context Protocol</strong> — open standard (Anthropic) for connecting tools to AI assistants</li>
+        <li>Three primitives: <strong>Tools</strong> (functions LLM can call), <strong>Resources</strong> (data it can read), <strong>Prompts</strong> (templates). Hermes uses only <strong>Tools</strong>.</li>
+        <li>Same concept as LangChain's <code>@tool</code> — but MCP is a transport-level standard, not a library-level abstraction</li>
+      </ul>
+
+      <h3>9.2 Transport: stdio</h3>
+      <p>VS Code spawns Hermes as a child process. All communication goes over <strong>stdin/stdout as JSON-RPC 2.0</strong>. No port, no server management.</p>
+      <pre>python -m hermes --mcp   <span class="cm"># VS Code runs this automatically</span></pre>
+
+      <h3>9.3 FastMCP</h3>
+      <pre><span class="kw">from</span> mcp.server <span class="kw">import</span> FastMCP
+
+mcp = FastMCP(name=<span class="st">"hermes"</span>, instructions=<span class="st">"..."</span>)
+
+@mcp.tool()
+<span class="kw">def</span> <span class="fn">search_knowledge</span>(query: <span class="cl">str</span>, top_k: <span class="cl">int</span> = <span class="nb">5</span>) -> <span class="cl">str</span>:
+    <span class="st">"""Search the local knowledge base — docstring becomes tool description."""</span>
+    results = knowledge.search(query, top_k=top_k)
+    <span class="kw">return</span> format_results(results)
+
+@mcp.tool()
+<span class="kw">async def</span> <span class="fn">ask_hermes</span>(question: <span class="cl">str</span>) -> <span class="cl">str</span>:
+    <span class="st">"""Full RAG pipeline — retrieval + LLM reasoning."""</span>
+    response = <span class="kw">await</span> chat_service.chat(message=question)
+    <span class="kw">return</span> response.answer</pre>
+
+      <h3>9.4 VS Code Configuration</h3>
+      <pre><span class="cm">// settings.json</span>
+{
+  <span class="st">"mcp"</span>: {
+    <span class="st">"servers"</span>: {
+      <span class="st">"hermes"</span>: {
+        <span class="st">"type"</span>: <span class="st">"stdio"</span>,
+        <span class="st">"command"</span>: <span class="st">"python"</span>,
+        <span class="st">"args"</span>: [<span class="st">"-m"</span>, <span class="st">"hermes"</span>, <span class="st">"--mcp"</span>],
+        <span class="st">"cwd"</span>: <span class="st">"C:/Project Hermes"</span>
+      }
+    }
+  }
+}</pre>
+
+      <h3>9.5 The 5 MCP Tools in Hermes</h3>
+      <table>
+        <thead><tr><th>Tool</th><th>Type</th><th>Calls LLM?</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>search_knowledge</code></td><td>sync</td><td>No</td><td>Raw vector search — top-k passages</td></tr>
+          <tr><td><code>ask_hermes</code></td><td>async</td><td>Yes</td><td>Full RAG pipeline — retrieval + LLM</td></tr>
+          <tr><td><code>ingest_document</code></td><td>sync</td><td>No</td><td>Add a file to the knowledge base</td></tr>
+          <tr><td><code>list_documents</code></td><td>sync</td><td>No</td><td>List all documents in knowledge base</td></tr>
+          <tr><td><code>remove_document</code></td><td>sync</td><td>No</td><td>Remove a document by ID</td></tr>
+        </tbody>
+      </table>
+
+      <div class="outcome">
+        <div class="icon">✅</div>
+        <p><strong>Outcome:</strong> You understand <code>hermes/mcp_server.py</code> completely. Adding a new MCP tool takes ~10 lines of code.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Phase 10 ────────────────────────────────────────── -->
+  <div class="phase ph10" id="phase10">
+    <div class="phase-header">
+      <div class="phase-number">10</div>
+      <div class="phase-meta">
+        <h2>Advanced RAG</h2>
+        <div class="tagline">Where good RAG becomes excellent RAG. Tackle after phases 1–9 are solid.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p10);border-color:var(--p10)40">Ongoing</div>
+    </div>
+    <div class="phase-body">
+
+      <h3>10.1 Better Embeddings</h3>
+      <table>
+        <thead><tr><th>Model</th><th>Provider</th><th>Dimensions</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><code>nomic-embed-text</code></td><td>Ollama (local)</td><td>768</td><td><strong>Start here.</strong> Best free local option.</td></tr>
+          <tr><td><code>bge-m3</code></td><td>Ollama (local)</td><td>1024</td><td>Multilingual, excellent quality</td></tr>
+          <tr><td><code>text-embedding-3-small</code></td><td>OpenAI</td><td>1536</td><td>Very high quality, costs money</td></tr>
+          <tr><td><code>text-embedding-3-large</code></td><td>OpenAI</td><td>3072</td><td>Best quality, higher cost</td></tr>
+        </tbody>
+      </table>
+
+      <h3>10.2 Re-Ranking</h3>
+      <p>Vector similarity is a <em>recall</em> measure. After retrieving top-20 chunks by vector similarity, run a cross-encoder re-ranker to re-score and keep only the top-3 most precisely relevant.</p>
+      <pre><span class="kw">from</span> sentence_transformers <span class="kw">import</span> CrossEncoder
+reranker = CrossEncoder(<span class="st">"cross-encoder/ms-marco-MiniLM-L-6-v2"</span>)
+scores = reranker.predict([(question, chunk) <span class="kw">for</span> chunk <span class="kw">in</span> chunks])
+ranked = sorted(zip(chunks, scores), key=<span class="kw">lambda</span> x: x[<span class="nb">1</span>], reverse=<span class="kw">True</span>)
+top_chunks = [c <span class="kw">for</span> c, _ <span class="kw">in</span> ranked[:<span class="nb">3</span>]]</pre>
+
+      <h3>10.3 Hybrid Search (BM25 + Vector)</h3>
+      <p>BM25 (keyword) catches exact term matches — IDs, proper names, technical codes. Vector catches semantic matches. Combined, they handle every query type.</p>
+
+      <h3>10.4 Query Expansion</h3>
+      <p>Short user questions often miss relevant chunks. Have the LLM rewrite the question into 3 alternative phrasings before searching. Merge and deduplicate all results.</p>
+
+      <h3>10.5 Contextual Chunking</h3>
+      <p>Problem: retrieved chunks lose context when read in isolation. Solution: prepend a short document/section summary to every chunk before storing it in ChromaDB.</p>
+
+      <h3>10.6 Evaluation with RAGAS</h3>
+      <pre>pip install ragas</pre>
+      <pre><span class="kw">from</span> ragas <span class="kw">import</span> evaluate
+<span class="kw">from</span> ragas.metrics <span class="kw">import</span> faithfulness, answer_relevancy, context_precision
+
+results = evaluate(
+    questions=test_questions,
+    answers=model_answers,
+    contexts=retrieved_contexts,
+    metrics=[faithfulness, answer_relevancy, context_precision]
+)</pre>
+      <div class="callout tip">💡 You cannot improve RAG quality without measuring it. RAGAS is the standard evaluation framework.</div>
+
+    </div>
+  </div>
+
+  <!-- ── Phase 11 ────────────────────────────────────────── -->
+  <div class="phase ph11" id="phase11">
+    <div class="phase-header">
+      <div class="phase-number">11</div>
+      <div class="phase-meta">
+        <h2>Extending Agents — Tools, External APIs &amp; LLM Orchestration</h2>
+        <div class="tagline">Step-by-step: add new tools, call external APIs, add web search, and route different tools to different LLMs.</div>
+      </div>
+      <div class="days-badge" style="color:var(--p11);border-color:var(--p11)40">5–7 days · After Phase 5</div>
+    </div>
+    <div class="phase-body">
+
+      <h3>11.1 How the Agent Uses Tools</h3>
+      <p>Before adding anything, understand the flow. The LangGraph agent alternates between two nodes:</p>
+      <pre>User message
+    │
+    ▼
+HermesAgent (LangGraph StateGraph)
+    │
+    ├── model node  ──► LLM decides: answer directly OR call a tool
+    │                        │
+    │                        ▼
+    └── tools node  ──► executes the chosen @tool, result added to messages
+         │
+         ▼
+    model node again ──► LLM reads tool result, decides next step or final answer</pre>
+      <p>The LLM sees only the tool <strong>name + docstring</strong> to decide which to call. The docstring <em>is</em> the instruction — write it carefully.</p>
+      <table>
+        <thead><tr><th>File</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td><code>hermes/tools/rag_search.py</code></td><td>Tool definition — <code>@tool</code> decorator, factory pattern</td></tr>
+          <tr><td><code>hermes/core/agent.py</code></td><td>Tools list passed to <code>create_agent(llm, tools=[...])</code></td></tr>
+          <tr><td><code>hermes/services/chat_service.py</code></td><td><code>_get_agent()</code> — the place to register new tools</td></tr>
+        </tbody>
+      </table>
+
+      <h3>11.2 Step-by-Step: Adding a New Tool</h3>
+      <p><strong>Example:</strong> A tool that calls an internal REST API to look up a component by part number.</p>
+
+      <p><strong>Step 1 — Create the tool file</strong> at <code>hermes/tools/bosch_api_search.py</code>:</p>
+      <pre><span class="cm">"""Tool: look up a Bosch component via the internal parts API."""</span>
+<span class="kw">from</span> __future__ <span class="kw">import</span> annotations
+<span class="kw">from</span> langchain_core.tools <span class="kw">import</span> tool
+
+<span class="decorator">@tool</span>
+<span class="kw">def</span> <span class="fn">bosch_component_lookup</span>(part_number: str) -&gt; str:
+    <span class="st">"""Look up a Bosch component by part number using the internal parts API.
+
+    Returns component name, description, status, and compatible systems.
+    Use this when the user asks about a specific part number or component.
+    """</span>
+    <span class="kw">import</span> httpx
+    url = <span class="kw">f</span><span class="st">"https://internal-api.bosch.com/parts/{part_number}"</span>
+    r = httpx.get(url, headers={<span class="st">"Authorization"</span>: <span class="st">"Bearer ..."</span>}, timeout=<span class="nb">10</span>)
+    <span class="kw">if</span> r.status_code == <span class="nb">404</span>:
+        <span class="kw">return</span> <span class="kw">f</span><span class="st">"Part number {part_number} not found."</span>
+    <span class="kw">if</span> r.status_code != <span class="nb">200</span>:
+        <span class="kw">return</span> <span class="kw">f</span><span class="st">"API error {r.status_code}: {r.text[:<span class="nb">200</span>]}"</span>
+    data = r.json()
+    <span class="kw">return</span> (
+        <span class="kw">f</span><span class="st">"Part: {data['name']}\nDescription: {data['description']}\n"</span>
+        <span class="kw">f</span><span class="st">"Status: {data['status']}\nCompatible with: {', '.join(data['compatible_systems'])}"</span>
+    )</pre>
+
+      <div class="callout tip">💡 <strong>Three rules for tool functions:</strong> (1) always return a <code>str</code>, (2) catch all exceptions and return an error string instead, (3) make the docstring precise about <em>when</em> to use this tool — not <em>what</em> it does.</div>
+
+      <p><strong>Step 2 — Register the tool</strong> in <code>hermes/services/chat_service.py</code>:</p>
+      <pre><span class="kw">from</span> hermes.tools.rag_search <span class="kw">import</span> build_rag_search_tool
+<span class="kw">from</span> hermes.tools.bosch_api_search <span class="kw">import</span> bosch_component_lookup
+
+<span class="kw">def</span> <span class="fn">_get_agent</span>(self, provider: str | None) -&gt; HermesAgent:
+    ...
+    rag_tool = build_rag_search_tool(self._knowledge)
+    agent = HermesAgent(llm=llm, tools=[rag_tool, bosch_component_lookup])  <span class="cm"># ← added</span></pre>
+
+      <p><strong>Step 3 — Expose via MCP</strong> (optional) in <code>hermes/mcp_server.py</code>:</p>
+      <pre><span class="decorator">@mcp.tool()</span>
+<span class="kw">def</span> <span class="fn">lookup_component</span>(part_number: str) -&gt; str:
+    <span class="st">"""Look up a Bosch component by part number."""</span>
+    <span class="kw">from</span> hermes.tools.bosch_api_search <span class="kw">import</span> bosch_component_lookup
+    <span class="kw">return</span> bosch_component_lookup.invoke({<span class="st">"part_number"</span>: part_number})</pre>
+
+      <p><strong>Step 4 — Test it in isolation:</strong></p>
+      <pre><span class="kw">from</span> hermes.tools.bosch_api_search <span class="kw">import</span> bosch_component_lookup
+result = bosch_component_lookup.invoke({<span class="st">"part_number"</span>: <span class="st">"1234-XYZ"</span>})
+print(result)</pre>
+
+      <h3>11.3 Web Search Tool</h3>
+      <p>LangChain ships built-in wrappers for search engines — they are already <code>@tool</code>-decorated objects.</p>
+
+      <p><strong>Option A — DuckDuckGo (free, no API key):</strong></p>
+      <pre>pip install duckduckgo-search</pre>
+      <pre><span class="kw">from</span> langchain_community.tools <span class="kw">import</span> DuckDuckGoSearchRun
+web_tool = DuckDuckGoSearchRun()   <span class="cm"># already a @tool — add directly to agent tools list</span></pre>
+
+      <p><strong>Option B — Tavily (better quality, requires API key):</strong></p>
+      <pre>pip install tavily-python</pre>
+      <pre><span class="kw">from</span> langchain_community.tools.tavily_search <span class="kw">import</span> TavilySearchResults
+web_tool = TavilySearchResults(max_results=<span class="nb">5</span>, tavily_api_key=<span class="st">"your_key"</span>)</pre>
+
+      <p>Add <code>web_tool</code> to the same <code>tools=[...]</code> list alongside <code>rag_tool</code>. The LLM will automatically choose <code>rag_search</code> for questions about ingested documents and the web tool for current/external information.</p>
+
+      <h3>11.4 LLM Orchestration — Different Models per Tool</h3>
+      <p>Different tasks justify different models. Web search summarization needs speed; final answer synthesis needs reasoning power.</p>
+
+      <p><strong>Approach 1 — Tool-level LLM selection (simplest):</strong> call a specific provider directly inside the tool.</p>
+      <pre><span class="kw">from</span> langchain_core.tools <span class="kw">import</span> tool
+<span class="kw">from</span> hermes.core.llm_router <span class="kw">import</span> LLMRouter
+
+<span class="decorator">@tool</span>
+<span class="kw">def</span> <span class="fn">web_search_and_summarize</span>(query: str) -&gt; str:
+    <span class="st">"""Search the web and return a summarized answer. Use for current events
+    or information not in the local knowledge base."""</span>
+    <span class="kw">import</span> httpx
+    r = httpx.get(<span class="st">"https://api.duckduckgo.com/"</span>,
+                  params={<span class="st">"q"</span>: query, <span class="st">"format"</span>: <span class="st">"json"</span>}, timeout=<span class="nb">10</span>)
+    raw = r.json().get(<span class="st">"AbstractText"</span>, <span class="st">"no results"</span>)
+
+    <span class="cm"># Summarize with a FAST/CHEAP model</span>
+    fast_llm = LLMRouter().get_provider(<span class="st">"bosch_llm_farm"</span>)   <span class="cm"># gpt-4o-mini</span>
+    response = fast_llm.invoke(<span class="kw">f</span><span class="st">"Summarize in 3 sentences:\n{raw}"</span>)
+    <span class="kw">return</span> response.content</pre>
+
+      <p><strong>Approach 2 — LiteLLM proxy</strong> gives a unified OpenAI-compatible interface to 100+ models with routing rules:</p>
+      <pre>pip install litellm</pre>
+      <pre><span class="cm"># litellm_config.yaml</span>
+model_list:
+  - model_name: fast
+    litellm_params:
+      model: azure/gpt-4o-mini
+  - model_name: powerful
+    litellm_params:
+      model: azure/gpt-4o
+router_settings:
+  routing_strategy: latency-based-routing</pre>
+      <pre><span class="cm"># In your code — identical interface regardless of backend</span>
+<span class="kw">import</span> litellm
+response = litellm.completion(model=<span class="st">"fast"</span>,     messages=[...])
+response = litellm.completion(model=<span class="st">"powerful"</span>, messages=[...])</pre>
+
+      <p><strong>Approach 3 — Native Hermes config routing:</strong> extend <code>config.yaml</code> with task-specific provider keys and read them inside tools via <code>get_config()</code>.</p>
+
+      <h3>11.5 Complete Example — Two-Agent Pipeline</h3>
+      <pre>User: "What is the latest EU regulation on e-bike motor power?"
+         │
+         ├─► RAG search ── fast LLM ──► ChromaDB → internal spec excerpts
+         │
+         ├─► Web search ── fast LLM ──► DuckDuckGo → current regulation news
+         │
+         ▼
+    Synthesizer ── powerful LLM ──► combines both results → final answer</pre>
+      <pre><span class="kw">from</span> langchain_core.tools <span class="kw">import</span> tool
+<span class="kw">from</span> hermes.core.llm_router <span class="kw">import</span> LLMRouter
+
+<span class="kw">def</span> <span class="fn">build_dual_search_tool</span>(knowledge_service):
+    fast_llm = LLMRouter().get_provider(<span class="st">"bosch_llm_farm"</span>)
+
+    <span class="decorator">@tool</span>
+    <span class="kw">def</span> <span class="fn">dual_search</span>(query: str) -&gt; str:
+        <span class="st">"""Search both local documents AND the web, then synthesize a combined answer.
+        Use when the question may need both internal knowledge and current external info."""</span>
+        <span class="kw">from</span> hermes.tools.rag_search <span class="kw">import</span> build_rag_search_tool
+        <span class="kw">from</span> langchain_community.tools <span class="kw">import</span> DuckDuckGoSearchRun
+
+        local = build_rag_search_tool(knowledge_service).invoke({<span class="st">"query"</span>: query, <span class="st">"top_k"</span>: <span class="nb">3</span>})
+        web   = DuckDuckGoSearchRun().invoke(query)
+
+        prompt = (<span class="kw">f</span><span class="st">"Combine these sources to answer: \"{query}\"\n\n"</span>
+                  <span class="kw">f</span><span class="st">"LOCAL:\n{local}\n\nWEB:\n{web}"</span>)
+        <span class="kw">return</span> fast_llm.invoke(prompt).content
+
+    <span class="kw">return</span> dual_search</pre>
+
+      <h3>11.6 What to Modify — Quick Reference</h3>
+      <table>
+        <thead><tr><th>Goal</th><th>File to modify</th><th>What to add</th></tr></thead>
+        <tbody>
+          <tr><td>Add a new tool</td><td><code>hermes/tools/&lt;new_tool&gt;.py</code></td><td>New file with <code>@tool</code> function returning <code>str</code></td></tr>
+          <tr><td>Register tool for chat agent</td><td><code>hermes/services/chat_service.py</code></td><td>Import + add to <code>tools=[...]</code> in <code>_get_agent()</code></td></tr>
+          <tr><td>Register tool for MCP / Copilot</td><td><code>hermes/mcp_server.py</code></td><td>New <code>@mcp.tool()</code> function</td></tr>
+          <tr><td>Add a new LLM provider</td><td><code>hermes/core/llm_router.py</code></td><td><code>_build_&lt;name&gt;()</code> static method + entry in <code>_BUILDERS</code> dict</td></tr>
+          <tr><td>Add web search</td><td><code>hermes/tools/web_search.py</code></td><td><code>DuckDuckGoSearchRun</code> or <code>TavilySearchResults</code></td></tr>
+          <tr><td>Per-tool LLM selection</td><td>Inside the <code>@tool</code> function body</td><td>Call <code>LLMRouter().get_provider("name")</code> directly</td></tr>
+          <tr><td>LiteLLM orchestration</td><td><code>hermes/core/llm_router.py</code></td><td>New <code>_build_litellm()</code> pointing to local LiteLLM proxy</td></tr>
+        </tbody>
+      </table>
+
+      <h3>11.7 Key Concepts</h3>
+      <div class="callout note">📌 <strong>Tool docstring = LLM instruction.</strong> The LLM reads only the name and docstring to decide whether to call a tool. If two tools have similar descriptions, the LLM will pick the wrong one. Make descriptions distinct and precise about <em>when</em> each should be used.</div>
+      <div class="callout note">📌 <strong>Tools must never raise exceptions.</strong> If a tool throws, the entire agent run fails. Always wrap external calls in try/except and return a descriptive error string.</div>
+      <div class="callout tip">💡 <strong>Cost rule of thumb:</strong> <code>gpt-4o-mini</code> costs ~20× less than <code>gpt-4o</code> per token. Use the fast model for web result summarization, classification, and data extraction. Use the powerful model only for complex reasoning over long context and final answer synthesis.</div>
+
+    </div>
+  </div>
+
+  <!-- ── Files to Study ──────────────────────────────────── -->
+  <h2 id="files">📂 Files to Study (Ordered by Phase)</h2>
+  <table class="file-ref">
+    <thead><tr><th>Phase</th><th>File</th><th>What to Focus On</th></tr></thead>
+    <tbody>
+      <tr><td>Overview</td><td><code>src-tauri/src/lib.rs</code></td><td>Sidecar spawn, <code>PORT=...</code> handshake, <code>backend-ready</code> event, desktop lifecycle</td></tr>
+      <tr><td>Overview</td><td><code>ui/src/App.svelte</code></td><td>Startup splash, backend initialization, root layout handoff</td></tr>
+      <tr><td>Overview</td><td><code>ui/src/lib/backend.svelte.ts</code></td><td>Tauri vs dev-mode backend startup, health probing, connection state</td></tr>
+      <tr><td>Overview</td><td><code>ui/src/lib/api/chat.ts</code></td><td>SSE streaming chat transport and provider test call</td></tr>
+      <tr><td>Overview</td><td><code>ui/src/lib/api/documents.ts</code></td><td>Desktop path ingestion vs multipart upload ingestion</td></tr>
+      <tr><td>Overview</td><td><code>ui/src/lib/api/config.ts</code></td><td>Settings/config transport layer and provider-status retrieval</td></tr>
+      <tr><td>2</td><td><code>hermes/services/knowledge_service.py</code></td><td>ChromaDB client, <code>_HashEmbeddingFunction</code>, <code>ingest_file()</code>, <code>search()</code>, metadata structure</td></tr>
+      <tr><td>3</td><td><code>hermes/processing/chunking.py</code></td><td><code>chunk_text()</code>, splitter config, metadata in <code>Chunk</code></td></tr>
+      <tr><td>3</td><td><code>hermes/processing/pipeline.py</code></td><td><code>DocumentProcessor.process()</code>, type detection, parser dispatch</td></tr>
+      <tr><td>4</td><td><code>hermes/tools/rag_search.py</code></td><td>Factory function pattern, <code>@tool</code>, context formatting</td></tr>
+      <tr><td>5</td><td><code>hermes/core/agent.py</code></td><td><code>create_agent</code>, <code>ainvoke</code>, <code>astream_events</code>, session→messages conversion</td></tr>
+      <tr><td>5</td><td><code>hermes/core/llm_router.py</code></td><td>Lazy init, <code>_BUILDERS</code> dict, <code>get_default()</code></td></tr>
+      <tr><td>5</td><td><code>hermes/services/chat_service.py</code></td><td>Agent-per-provider cache, <code>_get_agent()</code></td></tr>
+      <tr><td>6</td><td><code>hermes/server.py</code></td><td>Lifespan, middleware stack, SSE generator, file upload</td></tr>
+      <tr><td>6</td><td><code>hermes/middleware/auth.py</code></td><td><code>BaseHTTPMiddleware</code>, IP check, header check</td></tr>
+      <tr><td>6</td><td><code>packaging/scripts/build-backend.ps1</code></td><td>PyInstaller output path, target-triple rename, backend build entrypoint</td></tr>
+      <tr><td>6</td><td><code>packaging/scripts/copy-backend-to-resources.ps1</code></td><td>Why the sidecar is copied into Tauri resources only after the backend build completes</td></tr>
+      <tr><td>6</td><td><code>Makefile</code></td><td>Desktop bundle orchestration: cleanup → backend build → copy → Tauri build</td></tr>
+      <tr><td>7</td><td><code>hermes/models/api.py</code></td><td>All Pydantic schemas</td></tr>
+      <tr><td>7</td><td><code>hermes/config.py</code></td><td>Nested Pydantic models, env var expansion <code>${VAR}</code></td></tr>
+      <tr><td>9</td><td><code>hermes/mcp_server.py</code></td><td>FastMCP, lazy service init, all 5 tools, sync vs async</td></tr>
+      <tr><td>11</td><td><code>hermes/tools/rag_search.py</code></td><td><code>@tool</code> decorator, factory pattern, return-string contract</td></tr>
+      <tr><td>11</td><td><code>hermes/core/agent.py</code></td><td>How the tools list is passed into <code>create_agent</code></td></tr>
+      <tr><td>11</td><td><code>hermes/services/chat_service.py</code></td><td><code>_get_agent()</code> — where to add new tools</td></tr>
+      <tr><td>11</td><td><code>hermes/core/llm_router.py</code></td><td><code>get_provider()</code> — call inside a tool for per-tool LLM selection</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── Timeline ─────────────────────────────────────────── -->
+  <h2 id="timeline">🗓 Summary Timeline</h2>
+  <table class="timeline">
+    <thead><tr><th>Phase</th><th>Topic</th><th>Est. Days</th><th>Blocks Future Phases?</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>LLM concepts, embeddings, vector search</td><td>2–3</td><td class="blocking-yes">Blocks all others</td></tr>
+      <tr><td>2</td><td>ChromaDB</td><td>3–4</td><td class="blocking-yes">Blocks 3, 4, 9</td></tr>
+      <tr><td>3</td><td>Chunking</td><td>2</td><td class="blocking-yes">Blocks 4</td></tr>
+      <tr><td>4</td><td>Raw RAG pattern</td><td>3–4</td><td class="blocking-yes">Blocks 5</td></tr>
+      <tr><td>5</td><td>LangChain</td><td>5–6</td><td class="blocking-yes">Blocks 6, 9</td></tr>
+      <tr><td>6</td><td>FastAPI</td><td>3–4</td><td class="blocking-no">Independent after 5</td></tr>
+      <tr><td>7</td><td>Pydantic</td><td>1–2</td><td class="blocking-no">Parallel with 6</td></tr>
+      <tr><td>8</td><td>Ollama</td><td>1–2</td><td class="blocking-no">Unblocks real semantic search</td></tr>
+      <tr><td>9</td><td>MCP Protocol</td><td>2–3</td><td class="blocking-no">Requires 5</td></tr>
+      <tr><td>10</td><td>Advanced RAG</td><td>Ongoing</td><td class="blocking-no">After 1–9</td></tr>
+      <tr><td>11</td><td>Adding Tools, Agents &amp; LLM Orchestration</td><td>5–7</td><td class="blocking-no">After Phase 5</td></tr>
+      <tr style="border-top:2px solid var(--border)"><td colspan="2"><strong>Total</strong></td><td><strong>~37 days</strong></td><td></td></tr>
+    </tbody>
+  </table>
+
+  <hr>
+  <p style="color:var(--muted);font-size:0.82rem;text-align:center">
+    Project Hermes · Learning Path v1.2 · 2026-05-29 · Updated for the current Tauri + Svelte + Python desktop architecture and build pipeline.
+  </p>
+
+</main>
+</div>
+
+</body>
+</html>

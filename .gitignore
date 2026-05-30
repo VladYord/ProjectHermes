@@ -240,7 +240,6 @@ htmlcov/
 .coverage
 
 diagrams/
-doc/
 
 # Tauri build outputs
 src-tauri/target/
