@@ -65,8 +65,7 @@ copy-backend-resources: bundle-backend
 ifeq ($(OS),Windows_NT)
 	powershell -ExecutionPolicy Bypass -File packaging\scripts\copy-backend-to-resources.ps1
 else
-	@echo "copy-backend-resources: using bash" ; \
-	cp backend/dist/hermes-server-x86_64-pc-windows-msvc.exe src-tauri/resources/
+	bash packaging/scripts/copy-backend-to-resources.sh
 endif
 
 ## Full production bundle: backend binary + copy to resources + Tauri installer

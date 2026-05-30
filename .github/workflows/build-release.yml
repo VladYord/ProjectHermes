@@ -123,11 +123,22 @@ jobs:
         # Use system python — venv not present in CI; pip installed into actions python
         run: .\packaging\scripts\build-backend.ps1 -VenvPython python
 
+      - name: Copy hermes-server to Tauri resources (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: .\packaging\scripts\copy-backend-to-resources.ps1
+
       - name: Build hermes-server (Unix)
         if: matrix.platform != 'windows-latest'
         env:
           TARGET_TRIPLE: ${{ matrix.target }}
         run: bash packaging/scripts/build-backend.sh
+
+      - name: Copy hermes-server to Tauri resources (Unix)
+        if: matrix.platform != 'windows-latest'
+        env:
+          TARGET_TRIPLE: ${{ matrix.target }}
+        run: bash packaging/scripts/copy-backend-to-resources.sh
 
       # ── Node.js 20 ────────────────────────────────────────────────────────
       - uses: actions/setup-node@v4

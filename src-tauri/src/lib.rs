@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex as StdMutex};
 use std::{env, fs, path::PathBuf, time::Duration};
+#[cfg(windows)]
 use std::process::Command as ProcessCommand;
 use tokio::time::sleep;
 use tauri::{AppHandle, Emitter, Manager, State};

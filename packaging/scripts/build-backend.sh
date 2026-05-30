@@ -4,7 +4,7 @@
 # Usage:
 #   bash packaging/scripts/build-backend.sh [OUTPUT_DIR]
 #
-# OUTPUT_DIR defaults to src-tauri/resources.
+# OUTPUT_DIR defaults to backend/dist.
 
 set -euo pipefail
 
@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
-OUTPUT_DIR="${1:-src-tauri/resources}"
+OUTPUT_DIR="${1:-backend/dist}"
 PLATFORM="$(uname -s)"
 ARCH="$(uname -m)"
 TARGET_TRIPLE="${TARGET_TRIPLE:-}"
@@ -113,6 +113,7 @@ TRIPLE="${TARGET_TRIPLE}"
 SRC="${OUTPUT_DIR}/hermes-server"
 DEST="${OUTPUT_DIR}/hermes-server-${TRIPLE}"
 
+mkdir -p "$OUTPUT_DIR"
 if [ -f "$DEST" ]; then rm -f "$DEST"; fi
 mv "$SRC" "$DEST"
 chmod +x "$DEST"
