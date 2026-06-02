@@ -13,6 +13,8 @@
 
 ![Hermes UI](screenshots/HermesScreenshot.png)
 
+![Hermes UI](screenshots/demo_hq.gif)
+
 ---
 
 ## Features
