@@ -14,7 +14,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from hermes.logging import get_logger
+from hermes.log_setup import get_logger
 
 logger = get_logger("memory")
 

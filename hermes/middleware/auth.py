@@ -7,7 +7,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from hermes.config import get_config
-from hermes.logging import get_logger
+from hermes.log_setup import get_logger
 
 logger = get_logger("auth")
 

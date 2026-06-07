@@ -11,7 +11,7 @@ from langchain_core.tools import BaseTool
 from langchain.agents import create_agent
 
 from hermes.core.memory import ConversationMemory, Session
-from hermes.logging import get_logger
+from hermes.log_setup import get_logger
 from hermes.models.domain import ChatResponse
 
 logger = get_logger("agent")

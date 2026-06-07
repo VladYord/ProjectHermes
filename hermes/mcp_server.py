@@ -9,7 +9,7 @@ from mcp.server import FastMCP
 from hermes.config import get_config
 from hermes.core.llm_router import LLMRouter
 from hermes.core.memory import ConversationMemory
-from hermes.logging import get_logger, setup_logging
+from hermes.log_setup import get_logger, setup_logging
 from hermes.services.chat_service import ChatService
 from hermes.services.knowledge_service import KnowledgeService
 

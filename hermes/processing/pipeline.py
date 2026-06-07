@@ -7,7 +7,7 @@ import uuid
 from pathlib import Path
 
 from hermes.config import get_config
-from hermes.logging import get_logger
+from hermes.log_setup import get_logger
 from hermes.models.domain import Chunk, DocumentType, IngestResult
 from hermes.processing.chunking import chunk_text
 from hermes.processing.parsers.base import BaseParser

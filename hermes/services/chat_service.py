@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from hermes.core.agent import HermesAgent
 from hermes.core.llm_router import LLMRouter
 from hermes.core.memory import ConversationMemory
-from hermes.logging import get_logger
+from hermes.log_setup import get_logger
 from hermes.models.domain import ChatResponse
 from hermes.services.knowledge_service import KnowledgeService
 from hermes.tools.rag_search import create_rag_search_tool

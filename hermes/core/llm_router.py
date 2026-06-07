@@ -5,7 +5,7 @@ from __future__ import annotations
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from hermes.config import get_config
-from hermes.logging import get_logger
+from hermes.log_setup import get_logger
 
 logger = get_logger("llm_router")
 
