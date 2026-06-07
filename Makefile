@@ -48,8 +48,9 @@ build-ui:
 	cd ui && npm run build
 
 ## Build full Tauri installer (beforeBuildCommand in tauri.conf.json builds the frontend)
-build-app: prebuild-stop
-	cargo tauri build
+## Ensures backend resources exist (creates dev-stub if real bundle not present).
+build-app: prebuild-stop dev-stub
+	set RUST_MIN_STACK=67108864 && cargo tauri build
 
 ## Run PyInstaller to produce hermes-server binary (outputs to backend/dist/)
 bundle-backend: prebuild-stop

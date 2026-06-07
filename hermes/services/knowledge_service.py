@@ -14,7 +14,7 @@ from chromadb.config import Settings as ChromaSettings
 from chromadb.errors import InvalidArgumentError
 
 from hermes.config import get_config
-from hermes.logging import get_logger
+from hermes.log_setup import get_logger
 from hermes.models.domain import (
     Chunk,
     DocumentRecord,

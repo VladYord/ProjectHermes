@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # create-dev-stub.sh — Create a minimal dev-stub sidecar for cargo tauri dev.
 #
-# Tauri's Rust build script requires every externalBin file to exist on disk
-# before compilation, even in dev mode.  This script PyInstaller-bundles a
-# tiny stub that just prints "PORT=8000" and exits.
+# Tauri's Rust build script requires every resource file to exist on disk
+# before compilation.  This script uses PyInstaller's onedir mode to produce
+# a tiny stub bundle (hermes-server/) that just prints "PORT=8000" and exits.
 #
 # The real backend is built by:  make bundle-backend
 
@@ -12,21 +12,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../.."
 
-PLATFORM="$(uname -s)"
-ARCH="$(uname -m)"
 DEST_DIR="src-tauri/resources"
-
-if [ "$PLATFORM" = "Darwin" ]; then
-    TRIPLE="$( [ "$ARCH" = "arm64" ] && echo "aarch64-apple-darwin" || echo "x86_64-apple-darwin" )"
-else
-    TRIPLE="x86_64-unknown-linux-gnu"
-fi
-
-DEST="${DEST_DIR}/hermes-server-${TRIPLE}"
+DEST_BUNDLE="${DEST_DIR}/hermes-server"
 
 # Already exists — nothing to do.
-if [ -f "$DEST" ]; then
-    echo "Dev stub already present: $DEST"
+if [ -d "$DEST_BUNDLE" ]; then
+    echo "Dev stub already present: $DEST_BUNDLE"
     exit 0
 fi
 
@@ -47,8 +38,13 @@ fi
 
 mkdir -p "$DEST_DIR"
 
+# Clean any leftover from a prior run
+if [ -e "$DEST_BUNDLE" ]; then
+    rm -rf "$DEST_BUNDLE"
+fi
+
 "$PYTHON" -m PyInstaller \
-    --onefile \
+    --onedir \
     --console \
     --name hermes-server \
     --distpath "$DEST_DIR" \
@@ -56,8 +52,7 @@ mkdir -p "$DEST_DIR"
     --noconfirm \
     packaging/pyinstaller/hermes_stub.py
 
-mv "${DEST_DIR}/hermes-server" "$DEST"
-chmod +x "$DEST"
+chmod +x "${DEST_BUNDLE}/hermes-server"
 
-echo "Dev stub created: $DEST"
-echo "(Run 'make bundle-backend' to replace this with the real backend binary.)"
+echo "Dev stub created: $DEST_BUNDLE"
+echo "(Run 'make bundle-backend' to replace this with the real backend bundle.)"

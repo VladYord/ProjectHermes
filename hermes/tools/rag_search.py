@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from langchain_core.tools import tool
 
-from hermes.logging import get_logger
+from hermes.log_setup import get_logger
 from hermes.services.knowledge_service import KnowledgeService
 
 logger = get_logger("rag_tool")

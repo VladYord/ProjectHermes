@@ -4,7 +4,7 @@
 # Usage:
 #   bash packaging/scripts/build-backend.sh [OUTPUT_DIR]
 #
-# OUTPUT_DIR defaults to backend/dist.
+# OUTPUT_DIR defaults to backend/dist. The script builds an onedir bundle.
 
 set -euo pipefail
 
@@ -110,15 +110,14 @@ echo "Running PyInstaller..."
 # ── Rename to include Rust target triple ──────────────────────────────────────
 TRIPLE="${TARGET_TRIPLE}"
 
+# PyInstaller onedir already leaves bundle as ${OUTPUT_DIR}/hermes-server/
 SRC="${OUTPUT_DIR}/hermes-server"
-DEST="${OUTPUT_DIR}/hermes-server-${TRIPLE}"
 
-mkdir -p "$OUTPUT_DIR"
-if [ -f "$DEST" ]; then rm -f "$DEST"; fi
-mv "$SRC" "$DEST"
-chmod +x "$DEST"
+if [ -f "${SRC}/hermes-server" ]; then
+    chmod +x "${SRC}/hermes-server"
+fi
 
-SIZE_MB=$(du -m "$DEST" | cut -f1)
 echo ""
-echo "Build complete : $DEST"
-echo "Binary size    : ${SIZE_MB} MB"
+echo "Build complete : $SRC"
+SIZE_MB=$(du -sm "$SRC" | cut -f1)
+echo "Bundle size    : ${SIZE_MB} MB"

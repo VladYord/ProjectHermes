@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import os
 import socket
 import ssl
@@ -16,6 +17,26 @@ if getattr(sys, 'frozen', False):
     _meipass = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
     os.environ.setdefault('TESSDATA_PREFIX', os.path.join(_meipass, 'tessdata'))
     os.environ.setdefault('HERMES_PACKAGED', '1')
+    
+    # Patch None streams so libraries don't crash with isatty() errors.
+    # Skip if MCP mode is active — MCP needs real stdio.
+    if os.environ.get('HERMES_MCP') != '1':
+        # Redirect stderr to a log file in the app-data directory so startup
+        # crashes are visible when console=False hides the terminal.
+        try:
+            from hermes.config_manager import get_app_data_dir
+            _log_dir = get_app_data_dir()
+            _err_log = _log_dir / "backend-error.log"
+            _err_fh = open(_err_log, "a", encoding="utf-8")
+        except Exception:
+            _err_fh = open(os.devnull, "w")
+        if sys.stdout is None:
+            sys.stdout = io.TextIOWrapper(open(os.devnull, "wb"))
+        if sys.stderr is None:
+            sys.stderr = io.TextIOWrapper(_err_fh)
+        else:
+            # Also tee stderr to the log file so nothing is lost
+            pass
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Disable SSL certificate verification globally.
@@ -33,18 +54,28 @@ def find_free_port() -> int:
         return s.getsockname()[1]
 
 
+def _safe_stderr(msg: str) -> None:
+    """Print to stderr, silently skipping if stderr is None (GUI subsystem)."""
+    if sys.stderr is not None:
+        print(msg, file=sys.stderr, flush=True)
+
+
 def write_backend_port_file(port: int) -> None:
     """Persist the chosen packaged-backend port for the Tauri shell fallback."""
     if not os.environ.get('HERMES_PACKAGED'):
         return
-
     try:
         from hermes.config_manager import get_app_data_dir
-
-        port_file = get_app_data_dir() / "backend-port.txt"
+        app_dir = get_app_data_dir()
+        app_dir.mkdir(parents=True, exist_ok=True)   # ← ensure dir exists
+        port_file = app_dir / "backend-port.txt"
         port_file.write_text(f"{port}\n", encoding="utf-8")
+        # Write to stderr since stdout may be None
+        if sys.stderr is not None:
+            print(f"Port file written: {port_file}", file=sys.stderr, flush=True)
     except Exception as exc:
-        print(f"ERROR: Failed to write backend port file: {exc}", file=sys.stderr, flush=True)
+        if sys.stderr is not None:
+            print(f"ERROR: Failed to write backend port file: {exc}", file=sys.stderr, flush=True)
 
 
 def main() -> None:
@@ -66,10 +97,16 @@ def main() -> None:
     # redirects data paths to the OS app-data directory.
     if args.packaged:
         os.environ.setdefault('HERMES_PACKAGED', '1')
+    if args.mcp:
+        os.environ.setdefault('HERMES_MCP', '1')
+
+    from hermes.config import HermesConfig  # always available as safe default
+
+    cfg = None
 
     # Load config (must happen before other imports that use get_config)
     try:
-        from hermes.config import load_config, _config
+        from hermes.config import load_config
         import hermes.config as config_module
 
         config_module._config = load_config(args.config)
@@ -84,29 +121,29 @@ def main() -> None:
             else:
                 cfg.server.port = args.port
     except Exception as e:
-        # If config fails, use reasonable defaults and still print PORT
-        # so the parent process (Tauri) knows we're alive
-        import sys as _sys
-        print(f"ERROR: Config loading failed: {e}", file=_sys.stderr, flush=True)
-        cfg = None
-        if args.port == 0:
+        # If config fails, use reasonable defaults and still write port file
+        # so Tauri knows we're alive (even if stdout capture fails).
+        _safe_stderr(f"ERROR: Config loading failed: {e}")
+        try:
             from hermes.config import get_config
             cfg = get_config()
             cfg.server.port = find_free_port()
-        else:
-            port = args.port or 8000
-            print(f"PORT={port}", flush=True)
-            raise
-
+        except Exception  as e2:
+            # Final fallback if everything else fails
+            _safe_stderr(f"ERROR: Fallback config failed: {e2}")
+            cfg = HermesConfig()
+            cfg.server.port = find_free_port()
+    
     # Print PORT= before starting so Tauri (or any parent process) can read it.
     # Format is exactly "PORT=<number>\n" — Tauri parses this line from stdout.
-    # Use explicit sys.stdout.write + flush for maximum compatibility.
-    import sys as _sys
-    _sys.stdout.write(f"PORT={cfg.server.port}\n")
-    _sys.stdout.flush()
+    # When packaged with console=False (GUI subsystem), sys.stdout may be None;
+    # in that case the port-file fallback is the only handshake mechanism.
+    if sys.stdout is not None:
+        sys.stdout.write(f"PORT={cfg.server.port}\n")
+        sys.stdout.flush()
     write_backend_port_file(cfg.server.port)
 
-    from hermes.logging import setup_logging
+    from hermes.log_setup import setup_logging
     setup_logging()
 
     if args.mcp:
@@ -126,6 +163,7 @@ def main() -> None:
                 host=cfg.server.host,
                 port=cfg.server.port,
                 log_level="info",
+                log_config=None, # prevents isatty() crash
             )
         else:
             # Normal (source / venv) mode: string form enables uvicorn --reload

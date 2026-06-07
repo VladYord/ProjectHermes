@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-    Copy the built backend binary from backend/dist/ to src-tauri/resources/.
+    Copy the built backend bundle from backend/dist/ to src-tauri/resources/.
 
 .DESCRIPTION
     This script runs AFTER `build-backend.ps1` completes successfully.
-    It copies the bundled Python executable from backend/dist/ to src-tauri/resources/
-    so that Tauri can bundle it as a sidecar.
+    It copies the bundled Python sidecar directory from backend/dist/ to
+    src-tauri/resources/ so the app can launch it from bundled resources.
 
     This separation prevents file-locking issues on Windows where PyInstaller is
     writing to one directory while Tauri is trying to read from the resources folder.
@@ -22,42 +22,46 @@ $ProjectRoot = Resolve-Path (Join-Path $ScriptDir "..\..")
 Push-Location $ProjectRoot
 
 try {
-    $Triple      = "x86_64-pc-windows-msvc"
     $SrcDir      = Join-Path $ProjectRoot "backend\dist"
-    $SrcExe      = Join-Path $SrcDir "hermes-server-$Triple.exe"
+    $SrcBundle   = Join-Path $SrcDir "hermes-server"
     $ResourceDir = Join-Path $ProjectRoot "src-tauri\resources"
-    $DestExe     = Join-Path $ResourceDir "hermes-server-$Triple.exe"
+    $DestBundle  = Join-Path $ResourceDir "hermes-server"
+    $DestExe     = Join-Path $DestBundle "hermes-server.exe"
 
     Write-Host "=== Copy backend binary to Tauri resources ===" -ForegroundColor Cyan
 
     # ── Verify source exists
-    if (-not (Test-Path $SrcExe)) {
-        Write-Error "Source binary not found: $SrcExe`nRun 'make bundle-backend' first."
+    if (-not (Test-Path $SrcBundle)) {
+        Write-Error "Source bundle not found: $SrcBundle`nRun 'make bundle-backend' first."
     }
 
-    Write-Host "Source : $SrcExe"
-    Write-Host "Dest   : $DestExe"
+    Write-Host "Source : $SrcBundle"
+    Write-Host "Dest   : $DestBundle"
 
     # ── Ensure destination directory exists
     New-Item -ItemType Directory -Force -Path $ResourceDir | Out-Null
 
-    # ── Remove old destination (clear read-only bit first to avoid Windows errors)
-    if (Test-Path $DestExe) {
+    # ── Remove old destination bundle
+    if (Test-Path $DestBundle) {
         try {
-            attrib -R $DestExe | Out-Null
-            Remove-Item $DestExe -Force -ErrorAction Stop
-            Write-Host "Removed old copy: $DestExe"
+            Remove-Item $DestBundle -Recurse -Force -ErrorAction Stop
+            Write-Host "Removed old copy: $DestBundle"
         } catch {
-            Write-Warning "Could not remove old copy: $($_.Exception.Message)"
+            Write-Error "Could not remove old copy: $($_.Exception.Message)`nRun 'make prebuild-stop' and retry."
         }
     }
 
-    # ── Copy the binary
-    Copy-Item $SrcExe $DestExe -Force
-    Write-Host "Copied to resources." -ForegroundColor Green
+    # ── Copy the bundle
+    Copy-Item $SrcBundle $DestBundle -Recurse -Force
+    Write-Host "Copied bundle to resources." -ForegroundColor Green
 
-    $SizeMB = [math]::Round((Get-Item $DestExe).Length / 1MB, 1)
-    Write-Host "Binary size: ${SizeMB} MB"
+    if (-not (Test-Path $DestExe)) {
+        Write-Error "Copied bundle missing executable: $DestExe"
+    }
+
+    $Bytes = (Get-ChildItem $DestBundle -Recurse -File | Measure-Object -Property Length -Sum).Sum
+    $SizeMB = [math]::Round($Bytes / 1MB, 1)
+    Write-Host "Bundle size: ${SizeMB} MB"
 
     Write-Host "Ready for 'cargo tauri build'" -ForegroundColor Green
     exit 0

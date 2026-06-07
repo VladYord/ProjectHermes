@@ -3,9 +3,9 @@
     Build the Hermes backend server using PyInstaller (Windows).
 
 .DESCRIPTION
-    Produces a single-file executable suitable for bundling with the Tauri app.
-    The output is placed in backend/dist/ and renamed to include the
-    Rust target triple. A separate copy script moves it to src-tauri/resources/.
+    Produces an onedir bundle suitable for bundling with the Tauri app.
+    The output is placed in backend/dist/ under a target-triple folder.
+    A separate copy script moves the bundle into src-tauri/resources/.
 
 .PARAMETER OutputDir
     Destination directory for the built binary (default: backend\dist).
@@ -79,17 +79,17 @@ try {
         Write-Error "PyInstaller failed with exit code $LASTEXITCODE"
     }
 
-    # ── Rename to include Rust target triple ─────────────────────────────────
-    $Triple  = "x86_64-pc-windows-msvc"
-    $SrcExe  = Join-Path $OutputDir "hermes-server.exe"
-    $DestExe = Join-Path $OutputDir "hermes-server-$Triple.exe"
+    # ── PyInstaller already produces backend/dist/hermes-server/ ───────────
+    $SrcBundle = Join-Path $OutputDir "hermes-server"
 
-    if (Test-Path $DestExe) { Remove-Item $DestExe -Force }
-    Move-Item $SrcExe $DestExe
-    Write-Host "`nBuild complete: $DestExe" -ForegroundColor Green
+    if (-not (Test-Path $SrcBundle)) {
+        Write-Error "Expected PyInstaller output directory not found: $SrcBundle"
+    }
 
-    $SizeMB = [math]::Round((Get-Item $DestExe).Length / 1MB, 1)
-    Write-Host "Binary size  : ${SizeMB} MB"
+    $Bytes = (Get-ChildItem $SrcBundle -Recurse -File | Measure-Object -Property Length -Sum).Sum
+    $SizeMB = [math]::Round($Bytes / 1MB, 1)
+    Write-Host "`nBuild complete: $SrcBundle" -ForegroundColor Green
+    Write-Host "Bundle size  : ${SizeMB} MB"
 
     exit 0
 

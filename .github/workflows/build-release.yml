@@ -117,6 +117,11 @@ jobs:
           fi
 
       # ── Build hermes-server sidecar (PyInstaller) ────────────────────────
+      - name: Prebuild cleanup (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: .\packaging\scripts\stop-dev-processes.ps1
+
       - name: Build hermes-server (Windows)
         if: matrix.platform == 'windows-latest'
         shell: pwsh

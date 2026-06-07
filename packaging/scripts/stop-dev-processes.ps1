@@ -73,17 +73,23 @@ if ($killed -eq 0) {
 # Os { code: 5, kind: PermissionDenied } even with no processes running.
 # Deleting them here lets tauri-build start fresh without hitting that unwrap().
 $staleSidecarPaths = @(
+    # Old onefile format (with target triple)
     (Join-Path $ProjectRoot "backend\dist\hermes-server-x86_64-pc-windows-msvc.exe"),
     (Join-Path $ProjectRoot "src-tauri\target\release\hermes-server.exe"),
     (Join-Path $ProjectRoot "src-tauri\target\release\bundle\nsis\hermes-server.exe"),
-    (Join-Path $ProjectRoot "src-tauri\target\release\bundle\msi\hermes-server.exe")
+    (Join-Path $ProjectRoot "src-tauri\target\release\bundle\msi\hermes-server.exe"),
+    (Join-Path $ProjectRoot "src-tauri\resources\hermes-server-x86_64-pc-windows-msvc.exe"),
+    # New onedir format (no target triple)
+    (Join-Path $ProjectRoot "backend\dist\hermes-server"),
+    (Join-Path $ProjectRoot "src-tauri\resources\hermes-server"),
+    (Join-Path $ProjectRoot "src-tauri\target\release\hermes-server")
 )
 
 foreach ($path in $staleSidecarPaths) {
     if (Test-Path $path) {
         try {
             attrib -R $path | Out-Null
-            Remove-Item -Force $path -ErrorAction Stop
+            Remove-Item -Force -Recurse $path -ErrorAction Stop
             Write-Host "Removed stale sidecar copy: $path"
             $killed++
         } catch {

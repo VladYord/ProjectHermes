@@ -66,6 +66,7 @@ for _pkg in [
     'litellm',
     'tiktoken',
     'posthog',          # chromadb telemetry back-end
+    'pydantic_core',    # pydantic binary extension (critical dependency)
 ]:
     try:
         _d, _b, _h = collect_all(_pkg)
@@ -130,6 +131,7 @@ a = Analysis(
         # Cryptography back-end
         'cryptography',
         'cryptography.hazmat.backends.openssl',
+        'cryptography.hazmat.primitives.ciphers.aead',
         # Async SQLite (sessions)
         'aiosqlite',
         # MCP
@@ -162,22 +164,28 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='hermes-server',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=True,   # MUST be True — Tauri reads stdout for "PORT=<n>"
+    upx=False,
+    console=False,    # Hidden window; port file fallback handles stdout capture loss
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
     icon=None,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=False,
+    name='hermes-server',
 )

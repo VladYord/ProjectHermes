@@ -1,45 +1,41 @@
 #!/usr/bin/env bash
-# copy-backend-to-resources.sh — Copy the built backend sidecar into Tauri resources.
+# copy-backend-to-resources.sh — Copy the built backend sidecar bundle into Tauri resources.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-cd "$PROJECT_ROOT"
-
-PLATFORM="$(uname -s)"
-ARCH="$(uname -m)"
-TARGET_TRIPLE="${TARGET_TRIPLE:-}"
-
-if [ -z "$TARGET_TRIPLE" ]; then
-    if [ "$PLATFORM" = "Darwin" ]; then
-        TARGET_TRIPLE="$( [ "$ARCH" = "arm64" ] && echo "aarch64-apple-darwin" || echo "x86_64-apple-darwin" )"
-    else
-        TARGET_TRIPLE="x86_64-unknown-linux-gnu"
-    fi
-fi
+cd "$SCRIPT_DIR/../.."
 
 SRC_DIR="backend/dist"
-SRC="${SRC_DIR}/hermes-server-${TARGET_TRIPLE}"
+SRC_BUNDLE="${SRC_DIR}/hermes-server"
 DEST_DIR="src-tauri/resources"
-DEST="${DEST_DIR}/hermes-server-${TARGET_TRIPLE}"
+DEST_BUNDLE="${DEST_DIR}/hermes-server"
+DEST_EXE="${DEST_BUNDLE}/hermes-server"
 
 echo "=== Copy backend binary to Tauri resources ==="
-echo "Source : ${SRC}"
-echo "Dest   : ${DEST}"
+echo "Source : ${SRC_BUNDLE}"
+echo "Dest   : ${DEST_BUNDLE}"
 
-if [ ! -f "$SRC" ]; then
-    echo "ERROR: source binary not found: ${SRC}" >&2
+if [ ! -d "$SRC_BUNDLE" ]; then
+    echo "ERROR: source bundle not found: ${SRC_BUNDLE}" >&2
     echo "Run 'make bundle-backend' first." >&2
     exit 1
 fi
 
 mkdir -p "$DEST_DIR"
-rm -f "$DEST"
-cp "$SRC" "$DEST"
-chmod +x "$DEST"
+rm -rf "$DEST_BUNDLE"
+cp -R "$SRC_BUNDLE" "$DEST_BUNDLE"
 
-SIZE_MB=$(du -m "$DEST" | cut -f1)
-echo "Copied to resources."
-echo "Binary size: ${SIZE_MB} MB"
+if [ ! -f "$DEST_EXE" ] && [ ! -f "${DEST_EXE}.exe" ]; then
+    echo "ERROR: copied bundle missing executable: ${DEST_EXE}[.exe]" >&2
+    exit 1
+fi
+
+if [ -f "$DEST_EXE" ]; then
+    chmod +x "$DEST_EXE"
+fi
+
+SIZE_MB=$(du -sm "$DEST_BUNDLE" | cut -f1)
+echo "Copied bundle to resources."
+echo "Bundle size: ${SIZE_MB} MB"
 echo "Ready for 'cargo tauri build'"

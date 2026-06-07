@@ -1,12 +1,15 @@
+use std::process::Stdio;
 use std::sync::{Arc, Mutex as StdMutex};
 use std::{env, fs, path::PathBuf, time::Duration};
 #[cfg(windows)]
 use std::process::Command as ProcessCommand;
+#[cfg(unix)]
+use std::process::Command as ProcessCommand;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::process::Command as TokioCommand;
 use tokio::time::sleep;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri::async_runtime::Mutex;
-use tauri_plugin_shell::ShellExt;
-use tauri_plugin_shell::process::CommandEvent;
 
 // ---------------------------------------------------------------------------
 // Shared app state
@@ -22,15 +25,15 @@ struct BackendReadyPayload {
 pub struct AppState {
     /// Port the Python backend sidecar is listening on (None until started).
     pub backend_port: Arc<Mutex<Option<u16>>>,
-    /// Handle to the running sidecar child — used to kill it on app exit.
-    pub backend_child: Arc<StdMutex<Option<tauri_plugin_shell::process::CommandChild>>>,
+    /// Process id of the running backend sidecar.
+    pub backend_pid: Arc<StdMutex<Option<u32>>>,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
             backend_port: Arc::new(Mutex::new(None)),
-            backend_child: Arc::new(StdMutex::new(None)),
+            backend_pid: Arc::new(StdMutex::new(None)),
         }
     }
 }
@@ -73,10 +76,9 @@ async fn publish_backend_port(app: &AppHandle, port: u16) {
     log::info!("✓ Backend sidecar handshake complete: port {port}");
 }
 
-fn terminate_backend_child(child: tauri_plugin_shell::process::CommandChild) {
+fn terminate_backend_process(pid: u32) {
     #[cfg(windows)]
     {
-        let pid = child.pid();
         match ProcessCommand::new("taskkill")
             .args(["/PID", &pid.to_string(), "/T", "/F"])
             .status()
@@ -86,19 +88,59 @@ fn terminate_backend_child(child: tauri_plugin_shell::process::CommandChild) {
                 return;
             }
             Ok(status) => {
-                log::warn!("taskkill exited with status {status} for backend PID {pid}; falling back to child.kill()");
+                log::warn!("taskkill exited with status {status} for backend PID {pid}");
             }
             Err(error) => {
-                log::warn!("Failed to run taskkill for backend PID {pid}: {error}; falling back to child.kill()");
+                log::warn!("Failed to run taskkill for backend PID {pid}: {error}");
+            }
+        }
+
+        return;
+    }
+
+    #[cfg(unix)]
+    {
+        match ProcessCommand::new("kill")
+            .args(["-TERM", &pid.to_string()])
+            .status()
+        {
+            Ok(status) if status.success() => {
+                log::info!("Backend sidecar terminated on exit (PID {pid}).");
+            }
+            Ok(status) => {
+                log::warn!("kill exited with status {status} for backend PID {pid}");
+            }
+            Err(error) => {
+                log::warn!("Failed to run kill for backend PID {pid}: {error}");
             }
         }
     }
+}
 
-    if let Err(error) = child.kill() {
-        log::warn!("Failed to kill backend sidecar on exit: {error}");
-    } else {
-        log::info!("Backend sidecar killed on exit.");
+fn backend_executable_name() -> &'static str {
+    #[cfg(windows)]
+    {
+        return "hermes-server.exe";
     }
+
+    #[cfg(not(windows))]
+    {
+        return "hermes-server";
+    }
+}
+
+fn backend_executable_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let resource_dir = app
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("Cannot resolve resource directory: {e}"))?;
+    // resources config is "resources/hermes-server/" which preserves the
+    // relative path from src-tauri/, so the binary lives at:
+    //   $RESOURCE/resources/hermes-server/hermes-server.exe
+    let full_path = resource_dir.join("resources").join("hermes-server").join(backend_executable_name());
+    log::warn!("Resolved backend path: {}", full_path.display());
+    log::warn!("Resource dir: {}", resource_dir.display());
+    Ok(full_path)
 }
 
 // ---------------------------------------------------------------------------
@@ -114,28 +156,35 @@ fn terminate_backend_child(child: tauri_plugin_shell::process::CommandChild) {
 /// shell plugin returns an error and this function returns early — the
 /// frontend's dev-mode path uses the manually-started port 8000 instead.
 async fn spawn_backend(app: AppHandle) {
-    let shell = app.shell();
-
     if let Some(path) = backend_port_file_path() {
         let _ = fs::remove_file(path);
     }
 
-    let sidecar_cmd = match shell.sidecar("hermes-server") {
-        Ok(cmd) => cmd,
-        Err(e) => {
-            // Expected in dev mode — frontend uses hardcoded port 8000.
-            log::warn!("Backend sidecar not found (expected in `cargo tauri dev`): {e}");
+    let backend_path = match backend_executable_path(&app) {
+        Ok(path) => path,
+        Err(error) => {
+            log::error!("Failed to resolve backend executable path: {error}");
             return;
         }
     };
 
-    log::info!("Attempting to spawn backend sidecar with args: --port 0 --packaged");
-    
-    let (mut rx, child) = match sidecar_cmd
+    if !backend_path.exists() {
+        log::error!("Backend sidecar executable not found at {}", backend_path.display());
+        return;
+    }
+
+    log::info!(
+        "Attempting to spawn backend sidecar: {} --port 0 --packaged",
+        backend_path.display()
+    );
+
+    let mut child = match TokioCommand::new(&backend_path)
         .args(["--port", "0", "--packaged"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()
     {
-        Ok(pair) => pair,
+        Ok(child) => child,
         Err(e) => {
             log::error!("Failed to spawn backend sidecar: {e}");
             return;
@@ -144,65 +193,97 @@ async fn spawn_backend(app: AppHandle) {
 
     log::info!("Backend sidecar spawned successfully, waiting for PORT= output...");
 
+    let fallback_timeout = Duration::from_secs(60);
     let port_file_fallback = {
         let handle = app.clone();
         tauri::async_runtime::spawn(async move {
-            for _ in 0..100 {
+            let deadline = tokio::time::Instant::now() + fallback_timeout;
+            while tokio::time::Instant::now() < deadline {
                 if let Some(port) = read_backend_port_file() {
+                    log::info!("Backend handshake via port file: port {port}");
                     publish_backend_port(&handle, port).await;
                     return;
                 }
-                sleep(Duration::from_millis(100)).await;
+                sleep(Duration::from_millis(200)).await;
             }
-            log::warn!("Backend sidecar port file fallback did not resolve within 10s");
+            log::error!(
+                "Backend sidecar port file fallback did not resolve within {}s",
+                fallback_timeout.as_secs()
+            );
+            // Log the app-data contents for debugging
+            if let Some(dir) = backend_port_file_path().and_then(|p| p.parent().map(|d| d.to_path_buf())) {
+                match std::fs::read_dir(&dir) {
+                    Ok(entries) => {
+                        for entry in entries.flatten() {
+                            log::warn!("  AppData entry: {}", entry.path().display());
+                        }
+                    }
+                    Err(e) => log::error!("  Cannot list app-data dir {}: {e}", dir.display()),
+                }
+            }
         })
     };
 
-    // Persist the child handle so we can kill it on app exit.
+    // Persist PID so we can kill it on app exit.
     {
         let state = app.state::<AppState>();
-        *state.backend_child.lock().expect("backend child mutex poisoned") = Some(child);
+        *state.backend_pid.lock().expect("backend pid mutex poisoned") = child.id();
     }
 
-    // Stream stdout/stderr; capture the "PORT=N" handshake line.
-    let mut port_received = false;
-    while let Some(event) = rx.recv().await {
-        match event {
-            CommandEvent::Stdout(bytes) => {
-                let line = String::from_utf8_lossy(&bytes);
+    if let Some(stdout) = child.stdout.take() {
+        let handle = app.clone();
+        tauri::async_runtime::spawn(async move {
+            let mut lines = BufReader::new(stdout).lines();
+            let mut port_found = false;
+            while let Ok(Some(line)) = lines.next_line().await {
                 let line = line.trim();
-                log::info!("backend stdout: {line}");  // Changed from debug to info for visibility
-
+                log::info!("backend stdout: {line}");
                 if let Some(port_str) = line.strip_prefix("PORT=") {
                     if let Ok(port) = port_str.parse::<u16>() {
-                        publish_backend_port(&app, port).await;
-                        port_received = true;
-                    } else {
-                        log::warn!("Failed to parse port from: {port_str}");
+                        port_found = true;
+                        publish_backend_port(&handle, port).await;
                     }
                 }
             }
-            CommandEvent::Stderr(bytes) => {
-                let err_line = String::from_utf8_lossy(&bytes);
-                let err_line = err_line.trim();
-                if !err_line.is_empty() {
-                    log::warn!("backend stderr: {err_line}");  // Changed from debug to warn
-                }
+            if !port_found {
+                log::error!("Backend stdout pipe closed without PORT= line");
             }
-            CommandEvent::Terminated(status) => {
-                port_file_fallback.abort();
-                if !port_received {
-                    log::error!("Backend sidecar terminated before sending PORT=: {:?}", status);
-                } else {
-                    log::info!("Backend sidecar terminated: {:?}", status);
-                }
-                break;
-            }
-            _ => {}
-        }
+        });
+    } else {
+        log::warn!("Backend stdout is None (expected with console=False)");
     }
 
-    port_file_fallback.abort();
+    if let Some(stderr) = child.stderr.take() {
+        tauri::async_runtime::spawn(async move {
+            let mut lines = BufReader::new(stderr).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                let line = line.trim();
+                if !line.is_empty() {
+                    log::warn!("backend stderr: {line}");
+                }
+            }
+        });
+    }
+
+    let handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let status = child.wait().await;
+        port_file_fallback.abort();
+
+        {
+            let state = handle.state::<AppState>();
+            *state.backend_pid.lock().expect("backend pid mutex poisoned") = None;
+        }
+
+        match status {
+            Ok(status) => {
+                log::warn!("Backend sidecar terminated: {status}");
+            }
+            Err(error) => {
+                log::error!("Backend sidecar wait failed: {error}");
+            }
+        }
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -217,13 +298,15 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![get_backend_port])
         .setup(|app| {
-            if cfg!(debug_assertions) {
-                app.handle().plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Info)
-                        .build(),
-                )?;
-            }
+            app.handle().plugin(
+                tauri_plugin_log::Builder::default()
+                    .level(if cfg!(debug_assertions) {
+                        log::LevelFilter::Info
+                    } else {
+                        log::LevelFilter::Warn
+                    })
+                    .build(),
+            )?;
         // Spawn the sidecar in a background task — production only.
         // In debug builds (`cargo tauri dev`) the developer starts the backend
         // manually and the frontend connects to hardcoded port 8000.
@@ -243,14 +326,14 @@ pub fn run() {
         .run(|app_handle, event| {
             // On app exit — kill the sidecar so it doesn't linger.
             if matches!(event, tauri::RunEvent::Exit) {
-                let child_arc = app_handle.state::<AppState>().backend_child.clone();
-                let child = {
-                    let mut guard = child_arc.lock().expect("backend child mutex poisoned");
+                let pid_arc = app_handle.state::<AppState>().backend_pid.clone();
+                let pid = {
+                    let mut guard = pid_arc.lock().expect("backend pid mutex poisoned");
                     guard.take()
                 };
 
-                if let Some(child) = child {
-                    terminate_backend_child(child);
+                if let Some(pid) = pid {
+                    terminate_backend_process(pid);
                 }
             }
         });

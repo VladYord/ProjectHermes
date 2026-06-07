@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 import httpx
@@ -23,7 +23,7 @@ from hermes.config_manager import (
 )
 from hermes.core.llm_router import LLMRouter
 from hermes.core.memory import ConversationMemory
-from hermes.logging import get_logger
+from hermes.log_setup import get_logger
 from hermes.middleware.auth import AuthMiddleware
 from hermes.models import api as schemas
 from hermes.services.chat_service import ChatService
@@ -38,14 +38,55 @@ _llm_router: LLMRouter | None = None
 _memory: ConversationMemory | None = None
 _chat_service: ChatService | None = None
 _ingest_service: IngestService | None = None
+_init_task: asyncio.Task[None] | None = None
+_services_ready = False
+_startup_error: str | None = None
+
+
+async def _initialize_services() -> None:
+    """Initialize heavy services in the background to reduce time-to-ready."""
+    global _knowledge, _llm_router, _memory, _chat_service, _ingest_service
+    global _services_ready, _startup_error
+
+    try:
+        llm_router = await asyncio.to_thread(LLMRouter)
+
+        try:
+            embedding_fn = await asyncio.to_thread(llm_router.get_embedding_fn)
+        except ValueError as exc:
+            logger.warning(
+                "Configured embedding provider unavailable (%s); falling back to hash embeddings."
+                " Open Settings to reconfigure.",
+                exc,
+            )
+            embedding_fn = await asyncio.to_thread(llm_router.get_embedding_fn, "hash")
+
+        knowledge = await asyncio.to_thread(KnowledgeService, embedding_fn)
+        memory = ConversationMemory()
+        chat_service = ChatService(knowledge, llm_router, memory)
+        ingest_service = IngestService(knowledge)
+
+        _llm_router = llm_router
+        _knowledge = knowledge
+        _memory = memory
+        _chat_service = chat_service
+        _ingest_service = ingest_service
+        _services_ready = True
+        logger.info("All services initialized")
+    except Exception as exc:  # noqa: BLE001
+        _startup_error = str(exc)
+        logger.exception("Service initialization failed: %s", exc)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize services on startup and clean up on shutdown."""
     global _knowledge, _llm_router, _memory, _chat_service, _ingest_service
+    global _init_task, _services_ready, _startup_error
 
     logger.info("Starting Hermes server v%s", __version__)
+    _services_ready = False
+    _startup_error = None
 
     # Overlay API keys from encrypted config.enc onto the runtime config.
     try:
@@ -53,23 +94,14 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # noqa: BLE001
         logger.warning("Could not load encrypted app config: %s", exc)
 
-    _llm_router = LLMRouter()
-    try:
-        embedding_fn = _llm_router.get_embedding_fn()
-    except ValueError as exc:
-        logger.warning(
-            "Configured embedding provider unavailable (%s); falling back to hash embeddings."
-            " Open Settings to reconfigure.",
-            exc,
-        )
-        embedding_fn = _llm_router.get_embedding_fn("hash")
-    _knowledge = KnowledgeService(embedding_fn=embedding_fn)
-    _memory = ConversationMemory()
-    _chat_service = ChatService(_knowledge, _llm_router, _memory)
-    _ingest_service = IngestService(_knowledge)
-    logger.info("All services initialized")
+    _init_task = asyncio.create_task(_initialize_services())
 
     yield
+
+    if _init_task and not _init_task.done():
+        _init_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await _init_task
 
     logger.info("Hermes server shutting down")
 
@@ -110,7 +142,9 @@ app.add_middleware(AuthMiddleware)
 
 def _require(service, name: str):
     if service is None:
-        raise HTTPException(status_code=503, detail=f"{name} not initialized")
+        if _startup_error:
+            raise HTTPException(status_code=503, detail=f"{name} unavailable: {_startup_error}")
+        raise HTTPException(status_code=503, detail=f"{name} is still initializing")
     return service
 
 
@@ -119,7 +153,8 @@ def _require(service, name: str):
 
 @app.get("/api/health", response_model=schemas.HealthResponse)
 async def health():
-    return schemas.HealthResponse(version=__version__)
+    status = "error" if _startup_error else ("ok" if _services_ready else "starting")
+    return schemas.HealthResponse(status=status, version=__version__)
 
 
 @app.get("/api/providers", response_model=schemas.ProvidersResponse)

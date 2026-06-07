@@ -1,0 +1,111 @@
+version: "3"
+
+tasks:
+
+  # ── Python / Dev ─────────────────────────────────────────────────────────────
+
+  run:
+    desc: Run Hermes Python module
+    cmd: .venv\\Scripts\\python.exe -m hermes
+
+  run-mcp:
+    desc: Run Hermes in MCP mode
+    cmd: .venv\\Scripts\\python.exe -m hermes --mcp
+
+  test:
+    desc: Run pytest suite
+    cmd: .venv\\Scripts\\python.exe -m pytest tests/ -q
+
+  lint:
+    desc: Lint with ruff
+    cmd: python -m ruff check hermes/ tests/
+
+  format:
+    desc: Format with ruff
+    cmd: python -m ruff format hermes/ tests/
+
+  clean:
+    desc: Remove chromadb data and pycache
+    cmds:
+      - cmd: powershell -Command "if (Test-Path data\\chromadb) { Remove-Item -Recurse -Force data\\chromadb }"
+        ignore_error: true
+      - cmd: powershell -Command "if (Test-Path __pycache__) { Remove-Item -Recurse -Force __pycache__ }"
+        ignore_error: true
+      - cmd: echo Cleaned.
+
+  # ── Desktop App ──────────────────────────────────────────────────────────────
+
+  dev:
+    desc: Start Tauri dev window (Svelte HMR + Tauri shell)
+    deps: [dev-stub]
+    cmd: cargo tauri dev
+
+  dev-stub:
+    desc: Create minimal stub binary so cargo tauri dev can compile (skips if already exists)
+    cmds:
+      - cmd: powershell -ExecutionPolicy Bypass -File packaging\\scripts\\create-dev-stub.ps1
+        platforms: [windows]
+      - cmd: bash packaging/scripts/create-dev-stub.sh
+        platforms: [linux, darwin]
+
+  prebuild-stop:
+    desc: Stop stale dev/bundle processes that can lock sidecar binaries on Windows
+    cmds:
+      - cmd: powershell -ExecutionPolicy Bypass -File packaging\\scripts\\stop-dev-processes.ps1
+        platforms: [windows]
+      - cmd: echo "prebuild-stop no-op on non-Windows"
+        platforms: [linux, darwin]
+
+  build-ui:
+    desc: Build Svelte frontend only
+    dir: ui
+    cmd: npm run build
+
+  build-app:
+    desc: Build full Tauri installer (beforeBuildCommand in tauri.conf.json builds the frontend)
+    deps:
+    - prebuild-stop
+    - dev-stub
+    - copy-backend-resources
+    env:
+      RUST_MIN_STACK: "67108864"
+    cmd: cargo tauri build
+
+  bundle-backend:
+    desc: Run PyInstaller to produce hermes-server binary (outputs to backend/dist/)
+    deps: [prebuild-stop]
+    cmds:
+      - cmd: powershell -ExecutionPolicy Bypass -File packaging\\scripts\\build-backend.ps1
+        platforms: [windows]
+      - cmd: bash packaging/scripts/build-backend.sh
+        platforms: [linux, darwin]
+
+  copy-backend-resources:
+    desc: Copy backend binary from backend/dist/ to src-tauri/resources/
+    deps: [bundle-backend]
+    cmds:
+      - cmd: powershell -ExecutionPolicy Bypass -File packaging\\scripts\\copy-backend-to-resources.ps1
+        platforms: [windows]
+      - cmd: bash packaging/scripts/copy-backend-to-resources.sh
+        platforms: [linux, darwin]
+
+  bundle-app:
+    desc: Full production bundle — backend binary + copy to resources + Tauri installer
+    cmds:
+    - task: copy-backend-resources
+    - task: build-app
+
+  release:
+    desc: "Tag and push a new release (usage: task release VERSION=0.2.0)"
+    vars:
+      VERSION: '{{.VERSION | default ""}}'
+    preconditions:
+      - sh: test -n "{{.VERSION}}"
+        msg: "VERSION is required. Usage: task release VERSION=0.2.0"
+    cmds: 
+      - echo Releasing version {{.VERSION}}
+      - git add -A
+      - git commit -m "release v{{.VERSION}}"
+      - git tag -a v{{.VERSION}} -m "Release v{{.VERSION}}"
+      - git push origin main
+      - git push origin v{{.VERSION}}

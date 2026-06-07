@@ -14,6 +14,8 @@ function isTauri(): boolean {
   );
 }
 
+const PACKAGED_BACKEND_STARTUP_TIMEOUT_MS = 180_000;
+
 class BackendState {
   port = $state<number | null>(null);
   ready = $state(false);
@@ -60,7 +62,7 @@ async function invokeWithTimeout<T>(
 
 async function waitForBackendPort(
   invoke: <T>(command: string, args?: Record<string, unknown>) => Promise<T>,
-  timeoutMs = 60_000,
+  timeoutMs = PACKAGED_BACKEND_STARTUP_TIMEOUT_MS,
 ): Promise<number | null> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
@@ -215,7 +217,7 @@ export async function initBackend(): Promise<string | null> {
           resolveReady = null;
           resolve('Backend failed to start. Check the application logs in %APPDATA%\\Hermes\\.');
         }
-      }, 60_000);
+      }, PACKAGED_BACKEND_STARTUP_TIMEOUT_MS);
     }),
   ]);
 }
