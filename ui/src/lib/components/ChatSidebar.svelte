@@ -67,17 +67,19 @@
     {/each}
   </nav>
 
-  <footer class="sidebar-footer">
-    <button
-      class="icon-btn"
-      onclick={() => (uiStore.showDocManager = !uiStore.showDocManager)}
-      title="Documents"
-    >📄</button>
-    <button
-      class="icon-btn"
-      onclick={() => (uiStore.showSettings = !uiStore.showSettings)}
-      title="Settings"
-    >⚙</button>
+  <footer class="sidebar-footer" class:collapsed={uiStore.sidebarCollapsed}>
+    {#if !uiStore.sidebarCollapsed}
+      <button
+        class="icon-btn"
+        onclick={() => (uiStore.showDocManager = !uiStore.showDocManager)}
+        title="Documents"
+      >📄</button>
+      <button
+        class="icon-btn"
+        onclick={() => (uiStore.showSettings = !uiStore.showSettings)}
+        title="Settings"
+      >⚙</button>
+    {/if}
     <button
       class="icon-btn collapse-btn"
       onclick={() => (uiStore.sidebarCollapsed = !uiStore.sidebarCollapsed)}
@@ -228,6 +230,10 @@
     padding: 8px;
     border-top: 1px solid var(--border);
     flex-wrap: nowrap;
+  }
+
+  .sidebar-footer.collapsed {
+    justify-content: center;
   }
 
   .icon-btn {
