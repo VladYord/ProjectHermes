@@ -203,7 +203,9 @@ jobs:
             libssl-dev \
             libxcb-randr0 \
             libxcb-xinerama0 \
-            libxcb-keysyms1
+            libxcb-keysyms1 \ 
+            libxkbcommon0 \
+            libxkbcommon-x11-0
           
           # Download and setup linuxdeploy
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy
