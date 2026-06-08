@@ -202,7 +202,8 @@ jobs:
             libglib2.0-0 \
             libssl-dev \
             libxcb-randr0 \
-            libxcb-xinerama0
+            libxcb-xinerama0 \
+            libxcb-keysyms1
           
           # Download and setup linuxdeploy
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy
@@ -224,7 +225,7 @@ jobs:
       # beforeBuildCommand in tauri.conf.json ("npm --prefix ui run build")
       # builds the Svelte frontend automatically before the Rust compilation.
       - name: Build Tauri app
-        run: tauri build --target ${{ matrix.target }}
+        run: tauri build --target ${{ matrix.target }} -- --verbose
 
       # ── Upload installer as workflow artifact ─────────────────────────────
       - name: Upload installer artifact
