@@ -205,7 +205,7 @@ jobs:
             libxcb-xinerama0 \
             libxcb-keysyms1 \ 
             libxkbcommon0 \
-            libxkbcommon-x11-0
+            libxkbcommon-x11-0 || sudo apt-get install -y --fix-broken
           
           # Download and setup linuxdeploy
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy
