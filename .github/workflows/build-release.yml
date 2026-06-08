@@ -203,7 +203,7 @@ jobs:
             libssl-dev \
             libxcb-randr0 \
             libxcb-xinerama0 \
-            libxcb-keysyms1 \ 
+            libxcb-keysyms1 \
             libxkbcommon0 \
             libxkbcommon-x11-0 || sudo apt-get install -y --fix-broken
           
@@ -215,7 +215,7 @@ jobs:
           fi
           chmod +x linuxdeploy
           sudo mv linuxdeploy /usr/local/bin/
-
+      
           # Verify linuxdeploy works
           /usr/local/bin/linuxdeploy --version || exit 1
 
