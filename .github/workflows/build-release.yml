@@ -171,8 +171,8 @@ jobs:
       - name: Install WebKit2GTK (Linux)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get update -y
+          sudo apt-get install -y  --fix-missing \
             libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
             librsvg2-dev \
@@ -186,14 +186,14 @@ jobs:
             libpango-1.0-0 \
             libpangocairo-1.0-0 \
             libgl1-mesa-glx \
-            zlib1g-dev
+            zlib1g-dev || sudo apt-get install -y --fix-broken
 
       # ── Setup linuxdeploy (Linux) ──────────────────────────────────────
       - name: Setup linuxdeploy (Linux)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           # Install linuxdeploy dependencies
-          sudo apt-get update
+          sudo apt-get update -y
           sudo apt-get install -y \
             libfuse2 \
             libxcb-render0 \
