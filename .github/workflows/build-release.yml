@@ -226,6 +226,9 @@ jobs:
           fi
           chmod +x linuxdeploy
           sudo mv linuxdeploy /usr/local/bin/
+
+          # Extract and run linuxdeploy to avoid FUSE issues in CI
+          export APPIMAGE_EXTRACT_AND_RUN=1
       
           # Verify linuxdeploy works
           /usr/local/bin/linuxdeploy --version || exit 1
@@ -238,6 +241,8 @@ jobs:
       # beforeBuildCommand in tauri.conf.json ("npm --prefix ui run build")
       # builds the Svelte frontend automatically before the Rust compilation.
       - name: Build Tauri app
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1  # Avoid FUSE issues with linuxdeploy in CI
         run: tauri build --target ${{ matrix.target }} -- --verbose
 
       # ── Upload installer as workflow artifact ─────────────────────────────
