@@ -220,19 +220,24 @@ jobs:
             libxcb1 \
             libxdmcp6 \
             libxext6 \
-            libxrender1 || sudo apt-get install -y --fix-broken
+            libxrender1 \
+            libgtk-3-0 \
+            libgdk-pixbuf2.0-0 \
+            libpango-1.0-0 \
+            libpangocairo-1.0-0 \
+            libcairo2 || sudo apt-get install -y --fix-broken
           
-          # Download and setup linuxdeploy
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy
-          if [ ! -f linuxdeploy ]; then
-            echo "Failed to download linuxdeploy"
-            exit 1
-          fi
+          # Download linuxdeploy with verbose error output
+          wget -v https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy 2>&1 || {
+            echo "Failed to download linuxdeploy"; 
+            exit 1; 
+          }
           chmod +x linuxdeploy
           sudo mv linuxdeploy /usr/local/bin/
 
-          # Extract and run linuxdeploy to avoid FUSE issues in CI
+          # Set environment variables
           export APPIMAGE_EXTRACT_AND_RUN=1
+          export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
       
           # Verify linuxdeploy works
           /usr/local/bin/linuxdeploy --version || exit 1
@@ -248,7 +253,8 @@ jobs:
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1  # Avoid FUSE issues with linuxdeploy in CI
           LINUXDEPLOY_VERBOSE: 1 
-        run: tauri build --target ${{ matrix.target }} -- --verbose
+          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:${{ env.LD_LIBRARY_PATH }}
+        run: tauri build --target ${{ matrix.target }} -- --verbose 2>&1
 
       # ── Upload installer as workflow artifact ─────────────────────────────
       - name: Upload installer artifact
