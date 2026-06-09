@@ -190,13 +190,16 @@ jobs:
             libssl-dev \
             libx11-dev \
             libxext-dev \
-            libxrender-dev || sudo apt-get install -y --fix-broken
+            libxrender-dev \
+            libgio-2.0-0 \
+            libgmodule-2.0-0 \
+            libgobject-2.0-0 \
+            libglib2.0-0 || sudo apt-get install -y --fix-broken
 
       # ── Setup linuxdeploy (Linux) ──────────────────────────────────────
       - name: Setup linuxdeploy (Linux)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
-          # Install linuxdeploy dependencies
           sudo apt-get update -y
           sudo apt-get install -y \
             libfuse2 \
@@ -225,23 +228,27 @@ jobs:
             libgdk-pixbuf2.0-0 \
             libpango-1.0-0 \
             libpangocairo-1.0-0 \
-            libcairo2 || sudo apt-get install -y --fix-broken
+            libcairo2 \
+            libgio-2.0-0 || sudo apt-get install -y --fix-broken
           
-          # Download linuxdeploy with verbose error output
-          wget -v https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy 2>&1 || {
-            echo "Failed to download linuxdeploy"; 
-            exit 1; 
-          }
+          # Download linuxdeploy with retry logic
+          for attempt in {1..3}; do
+            echo "Download attempt $attempt..."
+            wget -v https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy && break
+            if [ $attempt -lt 3 ]; then sleep 5; fi
+          done
+          
+          if [ ! -f linuxdeploy ]; then
+            echo "Failed to download linuxdeploy after 3 attempts"
+            exit 1
+          fi
+          
           chmod +x linuxdeploy
           sudo mv linuxdeploy /usr/local/bin/
-
-          # Set environment variables
-          export APPIMAGE_EXTRACT_AND_RUN=1
-          export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
-      
-          # Verify linuxdeploy works
+          
+          # Verify linuxdeploy functionality
           /usr/local/bin/linuxdeploy --version || exit 1
-
+      
       # ── Tauri CLI (pre-built npm binary — faster than cargo install) ──────
       - name: Install Tauri CLI
         run: npm install -g @tauri-apps/cli@^2
@@ -251,10 +258,13 @@ jobs:
       # builds the Svelte frontend automatically before the Rust compilation.
       - name: Build Tauri app
         env:
-          APPIMAGE_EXTRACT_AND_RUN: 1  # Avoid FUSE issues with linuxdeploy in CI
-          LINUXDEPLOY_VERBOSE: 1 
-          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:${{ env.LD_LIBRARY_PATH }}
-        run: tauri build --target ${{ matrix.target }} -- --verbose 2>&1
+          APPIMAGE_EXTRACT_AND_RUN: 1
+          LINUXDEPLOY_VERBOSE: 1
+          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:${{ env.LD_LIBRARY_PATH }}
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          export LD_DEBUG=libs  # Enable library debugging
+          tauri build --target ${{ matrix.target }} -- --verbose 2>&1
 
       # ── Upload installer as workflow artifact ─────────────────────────────
       - name: Upload installer artifact
