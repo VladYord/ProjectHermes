@@ -188,7 +188,10 @@ jobs:
             libgtk-3-dev \
             librsvg2-dev \
             libxdo-dev \
-            libfuse2
+            libfuse2 \
+            libzstd1 \
+            libffi7 \
+            libgcrypt20
 
           # Ubuntu variants may provide either appindicator package name.
           if apt-cache show libayatana-appindicator3-dev >/dev/null 2>&1; then
@@ -218,6 +221,12 @@ jobs:
           
           chmod +x linuxdeploy
           sudo mv linuxdeploy /usr/local/bin/
+          
+          # Verify linuxdeploy is executable and diagnose missing dependencies
+          echo "Checking linuxdeploy binary..."
+          file /usr/local/bin/linuxdeploy
+          echo "Checking linuxdeploy runtime dependencies (ldd)..."
+          ldd /usr/local/bin/linuxdeploy || echo "Warning: some dependencies may be missing, but continuing..."
           
           # Verify linuxdeploy functionality
           /usr/local/bin/linuxdeploy --version || exit 1
