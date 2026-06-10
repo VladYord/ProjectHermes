@@ -201,6 +201,7 @@ jobs:
             libgmodule-2.0-0 \
             libglib2.0-0 \
             libglib2.0-dev \
+            libglib2.0-0-dev \
             libatk1.0-0 \
             libatk1.0-dev \
             libatk-bridge2.0-0 \
