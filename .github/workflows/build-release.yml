@@ -171,46 +171,38 @@ jobs:
       - name: Install WebKit2GTK (Linux)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
+          set -euxo pipefail
           sudo apt-get update -y
-          sudo apt-get install -y --fix-missing \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
+
+          # Canonical Tauri/Linux build dependencies for Ubuntu 22.04.
+          # Keep this list minimal and avoid invalid package names that break apt transactions.
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            curl \
+            wget \
+            file \
+            pkg-config \
             patchelf \
-            libfuse2 \
-            libxcb-render0 \
-            libxcb-shape0 \
-            libxcb-xfixes0 \
-            libgtk-3-0 \
-            libgtk-3-dev \
-            libgdk-3.0 \
-            libgdk-3.0-dev \
-            libgdk-pixbuf2.0-0 \
-            libgdk-pixbuf2.0-dev \
-            libpango-1.0-0 \
-            libpango1.0-dev \
-            libpangocairo-1.0-0 \
-            libcairo2 \
-            libcairo2-dev \
-            libgl1-mesa-glx \
-            zlib1g-dev \
             libssl-dev \
-            libx11-dev \
-            libxext-dev \
-            libxrender-dev \
-            libgio-2.0-0 \
-            libgio-2.0-dev \
-            libgmodule-2.0-0 \
-            libglib2.0-0 \
-            libglib2.0-dev \
-            libglib2.0-0-dev \
-            libatk1.0-0 \
-            libatk1.0-dev \
-            libatk-bridge2.0-0 \
-            pkg-config || sudo apt-get install -y --fix-broken
-          
-          # Verify pkg-config can find gdk-3.0
-          pkg-config --cflags --libs gdk-3.0 || (echo "GTK3 dev headers not found" && exit 1)
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev \
+            libxdo-dev \
+            libfuse2
+
+          # Ubuntu variants may provide either appindicator package name.
+          if apt-cache show libayatana-appindicator3-dev >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends libayatana-appindicator3-dev
+          elif apt-cache show libappindicator3-dev >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends libappindicator3-dev
+          else
+            echo "ERROR: neither libayatana-appindicator3-dev nor libappindicator3-dev is available"
+            exit 1
+          fi
+
+          # Verify pkg-config can find required dev packages.
+          pkg-config --cflags --libs gtk+-3.0 || (echo "GTK3 dev headers not found" && exit 1)
+          pkg-config --cflags --libs webkit2gtk-4.1 || (echo "WebKit2GTK 4.1 dev headers not found" && exit 1)
           
           # Download linuxdeploy with retry logic
           for attempt in {1..3}; do
