@@ -190,6 +190,7 @@ jobs:
             libpango-1.0-0 \
             libpango1.0-dev \
             libpangocairo-1.0-0 \
+            libcairo2 \
             libcairo2-dev \
             libgl1-mesa-glx \
             zlib1g-dev \
@@ -207,6 +208,9 @@ jobs:
             libatk1.0-dev \
             libatk-bridge2.0-0 \
             pkg-config || sudo apt-get install -y --fix-broken
+          
+          # Verify pkg-config can find gdk-3.0
+          pkg-config --cflags --libs gdk-3.0 || (echo "GTK3 dev headers not found" && exit 1)
           
           # Download linuxdeploy with retry logic
           for attempt in {1..3}; do
