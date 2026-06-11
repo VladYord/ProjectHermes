@@ -181,6 +181,7 @@ jobs:
             curl \
             wget \
             file \
+            ca-certificates \
             pkg-config \
             patchelf \
             libssl-dev \
@@ -194,6 +195,16 @@ jobs:
             squashfs-tools \
             desktop-file-utils \
             zsync
+
+          # OpenGL runtime package naming can differ by distro image.
+          if apt-cache show libgl1-mesa-glx >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends libgl1-mesa-glx
+          elif apt-cache show libgl1 >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends libgl1
+          else
+            echo "ERROR: neither libgl1-mesa-glx nor libgl1 is available"
+            exit 1
+          fi
 
           # libffi package name differs across Ubuntu versions.
           if apt-cache show libffi8 >/dev/null 2>&1; then
@@ -241,6 +252,7 @@ jobs:
           ldd /usr/local/bin/linuxdeploy || echo "Warning: some dependencies may be missing, but continuing..."
           
           # Verify linuxdeploy functionality
+          export APPIMAGE_EXTRACT_AND_RUN=1
           /usr/local/bin/linuxdeploy --version || exit 1
 
       - name: Install linuxdeploy plugins (Linux)
