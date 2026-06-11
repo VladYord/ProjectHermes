@@ -313,8 +313,11 @@ jobs:
           LINUXDEPLOY_VERBOSE: 1
           LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:${{ env.LD_LIBRARY_PATH }}
           QT_QPA_PLATFORM: offscreen
+          LINUXDEPLOY_PLUGIN_DIR: "${{ env.HOME }}/.local/share/linuxdeploy/plugins"
+          PATH: "${{ env.HOME }}/.local/share/linuxdeploy/plugins:${{ env.PATH }}"
         run: |
           export LINUXDEPLOY_PLUGIN_DIR="$HOME/.local/share/linuxdeploy/plugins"
+          export PATH="$HOME/.local/share/linuxdeploy/plugins:$PATH"
           which linuxdeploy-plugin-gtk || true
           which linuxdeploy-plugin-gstreamer || true
           which linuxdeploy-plugin-appimage || true
