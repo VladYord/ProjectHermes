@@ -190,8 +190,20 @@ jobs:
             libxdo-dev \
             libfuse2 \
             libzstd1 \
-            libffi7 \
-            libgcrypt20
+            libgcrypt20 \
+            squashfs-tools \
+            desktop-file-utils \
+            zsync
+
+          # libffi package name differs across Ubuntu versions.
+          if apt-cache show libffi8 >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends libffi8
+          elif apt-cache show libffi7 >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends libffi7
+          else
+            echo "ERROR: neither libffi8 nor libffi7 is available"
+            exit 1
+          fi
 
           # Ubuntu variants may provide either appindicator package name.
           if apt-cache show libayatana-appindicator3-dev >/dev/null 2>&1; then
@@ -230,6 +242,50 @@ jobs:
           
           # Verify linuxdeploy functionality
           /usr/local/bin/linuxdeploy --version || exit 1
+
+      - name: Install linuxdeploy plugins (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          set -euxo pipefail
+          PLUGIN_DIR="${HOME}/.local/share/linuxdeploy/plugins"
+          mkdir -p "$PLUGIN_DIR"
+
+          download_with_retry() {
+            local url="$1"
+            local out="$2"
+            for attempt in {1..3}; do
+              if wget -q "$url" -O "$out" && [ -s "$out" ]; then
+                chmod +x "$out"
+                return 0
+              fi
+              if [ "$attempt" -lt 3 ]; then sleep 5; fi
+            done
+            echo "ERROR: failed to download $url"
+            exit 1
+          }
+
+          download_with_retry \
+            "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh" \
+            "$PLUGIN_DIR/linuxdeploy-plugin-gtk.sh"
+
+          download_with_retry \
+            "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gstreamer/master/linuxdeploy-plugin-gstreamer.sh" \
+            "$PLUGIN_DIR/linuxdeploy-plugin-gstreamer.sh"
+
+          download_with_retry \
+            "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage" \
+            "$PLUGIN_DIR/linuxdeploy-plugin-appimage.AppImage"
+
+          # Provide extension-less command names linuxdeploy expects in PATH.
+          ln -sf "$PLUGIN_DIR/linuxdeploy-plugin-gtk.sh" "$PLUGIN_DIR/linuxdeploy-plugin-gtk"
+          ln -sf "$PLUGIN_DIR/linuxdeploy-plugin-gstreamer.sh" "$PLUGIN_DIR/linuxdeploy-plugin-gstreamer"
+          ln -sf "$PLUGIN_DIR/linuxdeploy-plugin-appimage.AppImage" "$PLUGIN_DIR/linuxdeploy-plugin-appimage"
+
+          echo "$PLUGIN_DIR" >> "$GITHUB_PATH"
+
+          # Quick plugin diagnostics.
+          ls -la "$PLUGIN_DIR"
+          "$PLUGIN_DIR/linuxdeploy-plugin-appimage" --appimage-version || true
       
       # ── Tauri CLI (pre-built npm binary — faster than cargo install) ──────
       - name: Install Tauri CLI
@@ -238,14 +294,23 @@ jobs:
       # ── Build Tauri app ───────────────────────────────────────────────────
       # beforeBuildCommand in tauri.conf.json ("npm --prefix ui run build")
       # builds the Svelte frontend automatically before the Rust compilation.
-      - name: Build Tauri app
+      - name: Build Tauri app (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
           LINUXDEPLOY_VERBOSE: 1
           LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:${{ env.LD_LIBRARY_PATH }}
           QT_QPA_PLATFORM: offscreen
         run: |
+          export LINUXDEPLOY_PLUGIN_DIR="$HOME/.local/share/linuxdeploy/plugins"
+          which linuxdeploy-plugin-gtk || true
+          which linuxdeploy-plugin-gstreamer || true
+          which linuxdeploy-plugin-appimage || true
           tauri build --target ${{ matrix.target }} -- --verbose 2>&1
+
+      - name: Build Tauri app (Windows/macOS)
+        if: matrix.platform != 'ubuntu-22.04'
+        run: tauri build --target ${{ matrix.target }} -- --verbose 2>&1
 
       # ── Upload installer as workflow artifact ─────────────────────────────
       - name: Upload installer artifact
