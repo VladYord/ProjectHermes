@@ -156,16 +156,16 @@ jobs:
         working-directory: ui
         run: npm ci
 
+      # Cache compiled Rust crates (cuts ~40% off subsequent build times)
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
       # ── Rust (stable + target triple) ────────────────────────────────────
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
-
-      # Cache compiled Rust crates (cuts ~40% off subsequent build times)
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri -> target
 
       # ── Linux WebKit2GTK (required by Tauri) ─────────────────────────────
       - name: Install WebKit2GTK (Linux)
