@@ -156,16 +156,16 @@ jobs:
         working-directory: ui
         run: npm ci
 
-      # Cache compiled Rust crates (cuts ~40% off subsequent build times)
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri -> target
-
       # ── Rust (stable + target triple) ────────────────────────────────────
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
+
+      # Cache compiled Rust crates (cuts ~40% off subsequent build times)
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
 
       # ── Linux WebKit2GTK (required by Tauri) ─────────────────────────────
       - name: Install WebKit2GTK (Linux)
@@ -311,16 +311,17 @@ jobs:
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
           LINUXDEPLOY_VERBOSE: 1
+          LINUXDEPLOY_PLUGIN_DIR: ${{ env.HOME }}/.local/share/linuxdeploy/plugins
           LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:${{ env.LD_LIBRARY_PATH }}
           QT_QPA_PLATFORM: offscreen
-          LINUXDEPLOY_PLUGIN_DIR: "${{ env.HOME }}/.local/share/linuxdeploy/plugins"
-          PATH: "${{ env.HOME }}/.local/share/linuxdeploy/plugins:${{ env.PATH }}"
         run: |
-          export LINUXDEPLOY_PLUGIN_DIR="$HOME/.local/share/linuxdeploy/plugins"
-          export PATH="$HOME/.local/share/linuxdeploy/plugins:$PATH"
-          which linuxdeploy-plugin-gtk || true
-          which linuxdeploy-plugin-gstreamer || true
-          which linuxdeploy-plugin-appimage || true
+          # Verify Rust toolchain is available
+          rustc --version
+          cargo --version
+          
+          # Verify linuxdeploy plugins are in place
+          ls -la "$LINUXDEPLOY_PLUGIN_DIR" || true
+          
           tauri build --target ${{ matrix.target }} -- --verbose 2>&1
 
       - name: Build Tauri app (Windows/macOS)
