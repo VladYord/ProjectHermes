@@ -194,7 +194,8 @@ jobs:
             libgcrypt20 \
             squashfs-tools \
             desktop-file-utils \
-            zsync
+            zsync \
+            appimage-runtime
 
           # OpenGL runtime package naming can differ by distro image.
           if apt-cache show libgl1-mesa-glx >/dev/null 2>&1; then
