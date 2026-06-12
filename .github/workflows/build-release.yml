@@ -192,6 +192,7 @@ jobs:
             libgtk-3-bin \
             librsvg2-dev \
             libgdk-pixbuf-2.0-dev \
+            gdk-pixbuf-2.0 \
             libglib2.0-bin \
             libxdo-dev \
             libfuse2 \
