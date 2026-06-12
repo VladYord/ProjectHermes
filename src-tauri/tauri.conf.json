@@ -53,17 +53,15 @@
     },
     "linux": {
       "deb": {
-    "depends": [
-      "libwebkit2gtk-4.1",
-      "libappindicator3-1",
-      "librsvg2-2",
-      "libssl3",
-      "libfuse2"
-    ]
-    },
-    "appimage": {
-        "bundleMediaFramework": true
-      }
+        "depends": [
+          "libwebkit2gtk-4.1",
+          "libappindicator3-1",
+          "librsvg2-2",
+          "libssl3",
+          "libfuse2"
+        ]
+      },
+      "appimage": {}
     }
   },
   "plugins": {

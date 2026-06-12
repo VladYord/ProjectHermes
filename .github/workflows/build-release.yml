@@ -194,7 +194,11 @@ jobs:
             libgcrypt20 \
             squashfs-tools \
             desktop-file-utils \
-            zsync
+            zsync \
+            libxcb1 \
+            libxkbcommon0 \
+            libstdc++6 \
+            libglib2.0-0
 
           # OpenGL runtime package naming can differ by distro image.
           if apt-cache show libgl1-mesa-glx >/dev/null 2>&1; then
@@ -241,6 +245,7 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
+          TAURI_CLI_LCV: verbose
           LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:${{ env.LD_LIBRARY_PATH }}
           QT_QPA_PLATFORM: offscreen
         run: |
