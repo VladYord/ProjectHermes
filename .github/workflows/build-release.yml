@@ -194,8 +194,7 @@ jobs:
             libgcrypt20 \
             squashfs-tools \
             desktop-file-utils \
-            zsync \
-            appimage-runtime
+            zsync
 
           # OpenGL runtime package naming can differ by distro image.
           if apt-cache show libgl1-mesa-glx >/dev/null 2>&1; then
@@ -230,111 +229,6 @@ jobs:
           # Verify pkg-config can find required dev packages.
           pkg-config --cflags --libs gtk+-3.0 || (echo "GTK3 dev headers not found" && exit 1)
           pkg-config --cflags --libs webkit2gtk-4.1 || (echo "WebKit2GTK 4.1 dev headers not found" && exit 1)
-          
-          # Download linuxdeploy AppImage, extract it once, and install native binary.
-          # This avoids AppImage runtime/FUSE quirks in CI.
-          for attempt in {1..3}; do
-            echo "Download attempt $attempt..."
-            wget -v https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O linuxdeploy-appimage && break
-            if [ $attempt -lt 3 ]; then sleep 5; fi
-          done
-          
-          if [ ! -f linuxdeploy-appimage ]; then
-            echo "Failed to download linuxdeploy after 3 attempts"
-            exit 1
-          fi
-          
-          chmod +x linuxdeploy-appimage
-          rm -rf squashfs-root
-          ./linuxdeploy-appimage --appimage-extract >/dev/null
-
-          if [ -f squashfs-root/usr/bin/linuxdeploy ]; then
-            sudo install -m 0755 squashfs-root/usr/bin/linuxdeploy /usr/local/bin/linuxdeploy
-          elif [ -f squashfs-root/AppRun ]; then
-            sudo install -m 0755 squashfs-root/AppRun /usr/local/bin/linuxdeploy
-          else
-            echo "ERROR: extracted linuxdeploy binary not found"
-            exit 1
-          fi
-
-          rm -rf linuxdeploy-appimage squashfs-root
-          
-          # Verify linuxdeploy is executable and diagnose missing dependencies
-          echo "Checking linuxdeploy binary..."
-          file /usr/local/bin/linuxdeploy
-          echo "Checking linuxdeploy runtime dependencies (ldd)..."
-          ldd /usr/local/bin/linuxdeploy || echo "Warning: some dependencies may be missing, but continuing..."
-          
-          # Verify linuxdeploy functionality
-          /usr/local/bin/linuxdeploy --version || exit 1
-
-      - name: Install linuxdeploy plugins (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          set -euxo pipefail
-          PLUGIN_DIR="${HOME}/.local/share/linuxdeploy/plugins"
-          mkdir -p "$PLUGIN_DIR"
-
-          download_with_retry() {
-            local url="$1"
-            local out="$2"
-            for attempt in {1..3}; do
-              if wget -q "$url" -O "$out" && [ -s "$out" ]; then
-                chmod +x "$out"
-                return 0
-              fi
-              if [ "$attempt" -lt 3 ]; then sleep 5; fi
-            done
-            echo "ERROR: failed to download $url"
-            exit 1
-          }
-
-          download_with_retry \
-            "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh" \
-            "$PLUGIN_DIR/linuxdeploy-plugin-gtk.sh"
-
-          download_with_retry \
-            "https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gstreamer/master/linuxdeploy-plugin-gstreamer.sh" \
-            "$PLUGIN_DIR/linuxdeploy-plugin-gstreamer.sh"
-
-          APPIMAGE_PLUGIN_TMP="/tmp/linuxdeploy-plugin-appimage-x86_64.AppImage"
-          APPIMAGE_PLUGIN_EXTRACT_DIR="/tmp/linuxdeploy-plugin-appimage-extract"
-
-          download_with_retry \
-            "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage" \
-            "$APPIMAGE_PLUGIN_TMP"
-
-          rm -rf "$APPIMAGE_PLUGIN_EXTRACT_DIR"
-          mkdir -p "$APPIMAGE_PLUGIN_EXTRACT_DIR"
-          (
-            cd "$APPIMAGE_PLUGIN_EXTRACT_DIR"
-            "$APPIMAGE_PLUGIN_TMP" --appimage-extract >/dev/null
-          )
-
-          if [ -f "$APPIMAGE_PLUGIN_EXTRACT_DIR/squashfs-root/usr/bin/linuxdeploy-plugin-appimage" ]; then
-            install -m 0755 \
-              "$APPIMAGE_PLUGIN_EXTRACT_DIR/squashfs-root/usr/bin/linuxdeploy-plugin-appimage" \
-              "$PLUGIN_DIR/linuxdeploy-plugin-appimage"
-          elif [ -f "$APPIMAGE_PLUGIN_EXTRACT_DIR/squashfs-root/AppRun" ]; then
-            install -m 0755 \
-              "$APPIMAGE_PLUGIN_EXTRACT_DIR/squashfs-root/AppRun" \
-              "$PLUGIN_DIR/linuxdeploy-plugin-appimage"
-          else
-            echo "ERROR: extracted linuxdeploy-plugin-appimage binary not found"
-            exit 1
-          fi
-
-          rm -rf "$APPIMAGE_PLUGIN_TMP" "$APPIMAGE_PLUGIN_EXTRACT_DIR"
-
-          # Provide extension-less command names linuxdeploy expects in PATH.
-          ln -sf "$PLUGIN_DIR/linuxdeploy-plugin-gtk.sh" "$PLUGIN_DIR/linuxdeploy-plugin-gtk"
-          ln -sf "$PLUGIN_DIR/linuxdeploy-plugin-gstreamer.sh" "$PLUGIN_DIR/linuxdeploy-plugin-gstreamer"
-
-          echo "$PLUGIN_DIR" >> "$GITHUB_PATH"
-
-          # Quick plugin diagnostics.
-          ls -la "$PLUGIN_DIR"
-          file "$PLUGIN_DIR/linuxdeploy-plugin-appimage" || true
       
       # ── Tauri CLI (pre-built npm binary — faster than cargo install) ──────
       - name: Install Tauri CLI
@@ -347,22 +241,11 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
-          LINUXDEPLOY_VERBOSE: 1
-          LINUXDEPLOY_PLUGIN_DIR: ${{ env.HOME }}/.local/share/linuxdeploy/plugins
           LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:${{ env.LD_LIBRARY_PATH }}
           QT_QPA_PLATFORM: offscreen
         run: |
-          # Verify Rust toolchain is available
           rustc --version
           cargo --version
-
-          # Verify extracted linuxdeploy binary is available
-          command -v linuxdeploy
-          linuxdeploy --version
-          
-          # Verify linuxdeploy plugins are in place
-          ls -la "$LINUXDEPLOY_PLUGIN_DIR" || true
-          
           tauri build --target ${{ matrix.target }} -- --verbose 2>&1
 
       - name: Build Tauri app (Windows/macOS)
