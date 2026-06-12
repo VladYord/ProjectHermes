@@ -33,6 +33,8 @@ jobs:
               src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
 
     runs-on: ${{ matrix.platform }}
+    env:
+      TAURI_CLI_VERSION: 2.11.2
 
     steps:
       - uses: actions/checkout@v4
@@ -238,13 +240,8 @@ jobs:
           pkg-config --cflags --libs gtk+-3.0 || (echo "GTK3 dev headers not found" && exit 1)
           pkg-config --cflags --libs webkit2gtk-4.1 || (echo "WebKit2GTK 4.1 dev headers not found" && exit 1)
           command -v glib-compile-schemas >/dev/null || (echo "glib-compile-schemas not found" && exit 1)
-          command -v gdk-pixbuf-query-loaders >/dev/null || (echo "gdk-pixbuf-query-loaders not found" && exit 1)
       
-      # ── Tauri CLI (pre-built npm binary — faster than cargo install) ──────
-      
-      - name: Select Tauri CLI version
-        shell: bash
-        run: echo "TAURI_CLI_VERSION=2.11.2" >> "$GITHUB_ENV"
+      # ── Tauri CLI (pinned version) ─────────────────────────────────────────
 
       # ── Build Tauri app ───────────────────────────────────────────────────
       # beforeBuildCommand in tauri.conf.json ("npm --prefix ui run build")
@@ -259,11 +256,11 @@ jobs:
         run: |
           rustc --version
           cargo --version
-          npm exec --yes --package @tauri-apps/cli@${TAURI_CLI_VERSION} tauri build --target ${{ matrix.target }} -- --verbose 2>&1
+          npx --yes @tauri-apps/cli@${{ env.TAURI_CLI_VERSION }} build --target ${{ matrix.target }} -- --verbose 2>&1
 
       - name: Build Tauri app (Windows/macOS)
         if: matrix.platform != 'ubuntu-22.04'
-        run: npm exec --yes --package @tauri-apps/cli@${{ env.TAURI_CLI_VERSION }} tauri build --target ${{ matrix.target }} -- --verbose 2>&1
+        run: npx --yes @tauri-apps/cli@${{ env.TAURI_CLI_VERSION }} build --target ${{ matrix.target }} -- --verbose 2>&1
 
       # ── Upload installer as workflow artifact ─────────────────────────────
       - name: Upload installer artifact
