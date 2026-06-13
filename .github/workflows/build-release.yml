@@ -264,9 +264,10 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
-          RUST_LOG: tauri_bundler=trace,tauri_cli=debug
+          RUST_LOG: tauri_bundler=trace,tauri_cli=debug,linuxdeploy=trace
           LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:${{ env.LD_LIBRARY_PATH }}
           QT_QPA_PLATFORM: offscreen
+          LINUXDEPLOY_OUTPUT_VERSION_FILE: 1
         run: |
           rustc --version
           cargo --version
