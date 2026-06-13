@@ -238,12 +238,22 @@ jobs:
             exit 1
           fi
 
+          # On Ubuntu 22.04, gdk-pixbuf-query-loaders is installed to an arch-specific
+          # path that is NOT in $PATH. Symlink it so linuxdeploy's GTK plugin can find it.
+          GDK_PIXBUF_QUERY=$(find /usr/lib -name 'gdk-pixbuf-query-loaders' -type f 2>/dev/null | head -n1 || true)
+          if [ -n "$GDK_PIXBUF_QUERY" ]; then
+            sudo ln -sf "$GDK_PIXBUF_QUERY" /usr/local/bin/gdk-pixbuf-query-loaders
+            echo "Symlinked gdk-pixbuf-query-loaders -> $GDK_PIXBUF_QUERY"
+          else
+            echo "ERROR: gdk-pixbuf-query-loaders binary not found anywhere under /usr/lib"
+            exit 1
+          fi
+
           # Verify pkg-config can find required dev packages.
           pkg-config --cflags --libs gtk+-3.0 || (echo "GTK3 dev headers not found" && exit 1)
           pkg-config --cflags --libs webkit2gtk-4.1 || (echo "WebKit2GTK 4.1 dev headers not found" && exit 1)
           command -v glib-compile-schemas >/dev/null || (echo "glib-compile-schemas not found" && exit 1)
-          command -v gdk-pixbuf-query-loaders >/dev/null || (echo "gdk-pixbuf-query-loaders not found" && exit 1)
-          command -v appstreamcli >/dev/null || (echo "appstreamcli not found" && exit 1)
+          command -v gdk-pixbuf-query-loaders >/dev/null || (echo "gdk-pixbuf-query-loaders not in PATH after symlink" && exit 1)
       
       # ── Tauri CLI (pinned version) ─────────────────────────────────────────
 
