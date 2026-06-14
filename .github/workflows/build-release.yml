@@ -172,7 +172,7 @@ jobs:
             while IFS= read -r -d '' f; do
               print_needed "$f"
             done < <(find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -111 \) -print0) \
-              | grep -E '^libwebp[^/]*-[[:alnum:]_-]+\.so(\.[0-9]+)*$' \
+              | grep -E '^lib(webp|webpmux|webpdemux|sharpyuv)[^/]*-[[:alnum:]_-]+\.so(\.[0-9]+)*$' \
               | sort -u \
               | while read -r dep; do
                   [ -e "$INTERNAL_DIR/$dep" ] || echo "$dep"
@@ -189,6 +189,7 @@ jobs:
               libwebpdemux-*.so*) SYS_LIB=$(ldconfig -p | awk '/libwebpdemux\.so\./{print $4; exit}') ;;
               libwebpmux-*.so*)   SYS_LIB=$(ldconfig -p | awk '/libwebpmux\.so\./{print $4; exit}') ;;
               libwebp-*.so*)      SYS_LIB=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}') ;;
+              libsharpyuv-*.so*)  SYS_LIB=$(ldconfig -p | awk '/libsharpyuv\.so\./{print $4; exit}') ;;
               *)                  SYS_LIB="" ;;
             esac
 
@@ -201,16 +202,21 @@ jobs:
             fi
           done
 
-          # Hard fallback for the exact SONAME observed in CI logs.
-          # Keep this until upstream wheel naming is stable.
-          if [ ! -e "$INTERNAL_DIR/libwebp-67ee3789.so.7.2.0" ]; then
-            SYS_LIBWEBP=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}')
-            if [ -n "$SYS_LIBWEBP" ]; then
-              cp -fL "$SYS_LIBWEBP" "$INTERNAL_DIR/libwebp-67ee3789.so.7.2.0"
-              chmod 0644 "$INTERNAL_DIR/libwebp-67ee3789.so.7.2.0"
-              echo "Copied hard fallback libwebp-67ee3789.so.7.2.0 from $SYS_LIBWEBP"
+          # Hard fallback SONAMEs observed in CI logs.
+          for fallback in libwebp-67ee3789.so.7.2.0 libsharpyuv-0bacc318.so.0.1.2; do
+            if [ ! -e "$INTERNAL_DIR/$fallback" ]; then
+              case "$fallback" in
+                libwebp-*) SYS_FALLBACK=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}') ;;
+                libsharpyuv-*) SYS_FALLBACK=$(ldconfig -p | awk '/libsharpyuv\.so\./{print $4; exit}') ;;
+                *) SYS_FALLBACK="" ;;
+              esac
+              if [ -n "$SYS_FALLBACK" ]; then
+                cp -fL "$SYS_FALLBACK" "$INTERNAL_DIR/$fallback"
+                chmod 0644 "$INTERNAL_DIR/$fallback"
+                echo "Copied hard fallback $fallback from $SYS_FALLBACK"
+              fi
             fi
-          fi
+          done
 
       # ── Node.js 20 ────────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
@@ -315,14 +321,28 @@ jobs:
           fi
 
           # linuxdeploy resolves NEEDED entries via host linker paths while scanning AppDir.
-          # Provide compatibility SONAME alias used by some bundled wheels.
-          SYS_LIBWEBP=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}')
-          if [ -n "$SYS_LIBWEBP" ]; then
-            sudo ln -sf "$SYS_LIBWEBP" /usr/lib/x86_64-linux-gnu/libwebp-67ee3789.so.7.2.0
+          # Mirror hashed SONAMEs required by sidecar binaries into host linker path.
+          INTERNAL_DIR="src-tauri/resources/hermes-server/_internal"
+          if [ -d "$INTERNAL_DIR" ]; then
+            while IFS= read -r dep; do
+              case "$dep" in
+                libwebpdemux-*.so*) SYS_LIB=$(ldconfig -p | awk '/libwebpdemux\.so\./{print $4; exit}') ;;
+                libwebpmux-*.so*)   SYS_LIB=$(ldconfig -p | awk '/libwebpmux\.so\./{print $4; exit}') ;;
+                libwebp-*.so*)      SYS_LIB=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}') ;;
+                libsharpyuv-*.so*)  SYS_LIB=$(ldconfig -p | awk '/libsharpyuv\.so\./{print $4; exit}') ;;
+                *)                  SYS_LIB="" ;;
+              esac
+              if [ -n "$SYS_LIB" ]; then
+                sudo ln -sf "$SYS_LIB" "/usr/lib/x86_64-linux-gnu/$dep"
+                echo "Linked host compatibility SONAME $dep -> $SYS_LIB"
+              fi
+            done < <(
+              find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -111 \) -print0 \
+                | xargs -0 -r -n1 sh -c 'patchelf --print-needed "$1" 2>/dev/null || true' _ \
+                | grep -E '^lib(webp|webpmux|webpdemux|sharpyuv)[^/]*-[[:alnum:]_-]+\.so(\.[0-9]+)*$' \
+                | sort -u
+            )
             sudo ldconfig
-            echo "Linked host compatibility SONAME libwebp-67ee3789.so.7.2.0 -> $SYS_LIBWEBP"
-          else
-            echo "WARNING: system libwebp provider not found; linuxdeploy may fail on hashed libwebp SONAME"
           fi
 
           # Verify pkg-config can find required dev packages.
@@ -341,7 +361,7 @@ jobs:
         env:
           APPIMAGE_EXTRACT_AND_RUN: 1
           RUST_LOG: tauri_bundler=trace,tauri_cli=debug,linuxdeploy=trace
-          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:${{ env.LD_LIBRARY_PATH }}
+          LD_LIBRARY_PATH: src-tauri/resources/hermes-server/_internal:/usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:${{ env.LD_LIBRARY_PATH }}
           QT_QPA_PLATFORM: offscreen
           LINUXDEPLOY_OUTPUT_VERSION_FILE: 1
         run: |
