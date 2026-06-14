@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "useLocalToolsDir": true,
     "publisher": "Hermes Project",
     "icon": [
       "icons/32x32.png",
@@ -61,9 +62,7 @@
           "libfuse2"
         ]
       },
-      "appimage": {
-        "bundleGstreamer": false
-      }
+      "appimage": {}
     }
   },
   "plugins": {

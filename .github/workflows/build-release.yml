@@ -285,14 +285,46 @@ jobs:
 
           echo "=== AppImage bundle dir tree ==="
           find src-tauri/target -type d -path "*/bundle/appimage*" -print || true
-          find src-tauri/target -type f -iname "*linuxdeploy*" -o -iname "*plugin*gtk*" -o -iname "*plugin*appimage*" | sed 's#^#FILE: #' || true
+          find src-tauri/target -type f \( -iname "*linuxdeploy*" -o -iname "*plugin*gtk*" -o -iname "*plugin*appimage*" \) | sed 's#^#FILE: #' || true
+
+          echo "=== Locate linuxdeploy cache artifacts (project + home cache) ==="
+          find src-tauri/target -type f \( -iname "*linuxdeploy*" -o -iname "*plugin*gtk*" -o -iname "*plugin*gstreamer*" -o -iname "*plugin*appimage*" \) 2>/dev/null | sed 's#^#TARGET_FILE: #' || true
+          find "$HOME" -type f \( -iname "*linuxdeploy*" -o -iname "*plugin*gtk*" -o -iname "*plugin*gstreamer*" -o -iname "*plugin*appimage*" \) 2>/dev/null | sed 's#^#HOME_FILE: #' || true
 
           echo "=== Inspect linuxdeploy binaries ==="
           while IFS= read -r f; do
             echo "--- $f ---"
             file "$f" || true
             ls -l "$f" || true
-          done < <(find src-tauri/target -type f -iname "*linuxdeploy*" | head -n 20)
+          done < <(find src-tauri/target "$HOME" -type f -iname "*linuxdeploy*" 2>/dev/null | head -n 40)
+
+          echo "=== Try direct linuxdeploy rerun for stderr ==="
+          APPDIR=$(find src-tauri/target -type d -name "*.AppDir" 2>/dev/null | head -n1)
+          LINUXDEPLOY_BIN=$(find src-tauri/target "$HOME" -type f \( -name "linuxdeploy" -o -name "linuxdeploy-*.AppImage" \) 2>/dev/null | head -n1)
+          GTK_PLUGIN=$(find src-tauri/target "$HOME" -type f -name "*linuxdeploy-plugin-gtk*.sh" 2>/dev/null | head -n1)
+          APPIMAGE_PLUGIN=$(find src-tauri/target "$HOME" -type f -name "*linuxdeploy-plugin-appimage*.AppImage" 2>/dev/null | head -n1)
+
+          echo "APPDIR=$APPDIR"
+          echo "LINUXDEPLOY_BIN=$LINUXDEPLOY_BIN"
+          echo "GTK_PLUGIN=$GTK_PLUGIN"
+          echo "APPIMAGE_PLUGIN=$APPIMAGE_PLUGIN"
+
+          if [ -n "$APPDIR" ] && [ -n "$LINUXDEPLOY_BIN" ]; then
+            chmod +x "$LINUXDEPLOY_BIN" || true
+            [ -n "$GTK_PLUGIN" ] && chmod +x "$GTK_PLUGIN" || true
+            [ -n "$APPIMAGE_PLUGIN" ] && chmod +x "$APPIMAGE_PLUGIN" || true
+
+            if [ -n "$GTK_PLUGIN" ]; then
+              export LINUXDEPLOY_PLUGIN_GTK="$GTK_PLUGIN"
+            fi
+            if [ -n "$APPIMAGE_PLUGIN" ]; then
+              export LINUXDEPLOY_PLUGIN_APPIMAGE="$APPIMAGE_PLUGIN"
+            fi
+
+            "$LINUXDEPLOY_BIN" --appimage-extract-and-run --verbosity 3 --appdir "$APPDIR" --plugin gtk --output appimage || true
+          else
+            echo "Could not rerun linuxdeploy: missing AppDir or linuxdeploy binary"
+          fi
 
       - name: Build Tauri app (Windows/macOS)
         if: matrix.platform != 'ubuntu-22.04'
