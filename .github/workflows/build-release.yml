@@ -159,16 +159,19 @@ jobs:
 
           # Some Python wheels expect hashed libwebp SONAMEs (e.g. libwebp-<hash>.so.7.2.0)
           # that are not always present in the bundled sidecar. Create local symlinks when missing.
-          SYS_LIBWEBP=$(ldconfig -p | awk '/libwebp\.so\.7/{print $4; exit}')
-          if [ -z "$SYS_LIBWEBP" ]; then
-            echo "System libwebp.so.7 not found in ldconfig; skipping libwebp repair"
-            exit 0
-          fi
+          print_needed() {
+            if command -v patchelf >/dev/null 2>&1; then
+              patchelf --print-needed "$1" 2>/dev/null || true
+            elif command -v readelf >/dev/null 2>&1; then
+              readelf -d "$1" 2>/dev/null | awk '/NEEDED/{gsub(/\[|\]/,"",$5); print $5}' || true
+            fi
+          }
 
           mapfile -t MISSING_WEBP_DEPS < <(
-            find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -111 \) -print0 \
-              | xargs -0 -r -n1 sh -c 'patchelf --print-needed "$1" 2>/dev/null || true' _ \
-              | grep -E '^libwebp-[[:alnum:]_-]+\.so(\.[0-9]+)*$' \
+            while IFS= read -r -d '' f; do
+              print_needed "$f"
+            done < <(find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -111 \) -print0) \
+              | grep -E '^libwebp[^/]*-[[:alnum:]_-]+\.so(\.[0-9]+)*$' \
               | sort -u \
               | while read -r dep; do
                   [ -e "$INTERNAL_DIR/$dep" ] || echo "$dep"
@@ -181,8 +184,19 @@ jobs:
           fi
 
           for dep in "${MISSING_WEBP_DEPS[@]}"; do
-            ln -sf "$SYS_LIBWEBP" "$INTERNAL_DIR/$dep"
-            echo "Linked $INTERNAL_DIR/$dep -> $SYS_LIBWEBP"
+            case "$dep" in
+              libwebpdemux-*.so*) SYS_LIB=$(ldconfig -p | awk '/libwebpdemux\.so\./{print $4; exit}') ;;
+              libwebpmux-*.so*)   SYS_LIB=$(ldconfig -p | awk '/libwebpmux\.so\./{print $4; exit}') ;;
+              libwebp-*.so*)      SYS_LIB=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}') ;;
+              *)                  SYS_LIB="" ;;
+            esac
+
+            if [ -n "$SYS_LIB" ]; then
+              ln -sf "$SYS_LIB" "$INTERNAL_DIR/$dep"
+              echo "Linked $INTERNAL_DIR/$dep -> $SYS_LIB"
+            else
+              echo "WARNING: no system provider found for $dep"
+            fi
           done
 
       # ── Node.js 20 ────────────────────────────────────────────────────────
