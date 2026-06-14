@@ -314,6 +314,17 @@ jobs:
             exit 1
           fi
 
+          # linuxdeploy resolves NEEDED entries via host linker paths while scanning AppDir.
+          # Provide compatibility SONAME alias used by some bundled wheels.
+          SYS_LIBWEBP=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}')
+          if [ -n "$SYS_LIBWEBP" ]; then
+            sudo ln -sf "$SYS_LIBWEBP" /usr/lib/x86_64-linux-gnu/libwebp-67ee3789.so.7.2.0
+            sudo ldconfig
+            echo "Linked host compatibility SONAME libwebp-67ee3789.so.7.2.0 -> $SYS_LIBWEBP"
+          else
+            echo "WARNING: system libwebp provider not found; linuxdeploy may fail on hashed libwebp SONAME"
+          fi
+
           # Verify pkg-config can find required dev packages.
           pkg-config --cflags --libs gtk+-3.0 || (echo "GTK3 dev headers not found" && exit 1)
           pkg-config --cflags --libs webkit2gtk-4.1 || (echo "WebKit2GTK 4.1 dev headers not found" && exit 1)
