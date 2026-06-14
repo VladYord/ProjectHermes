@@ -147,6 +147,44 @@ jobs:
           TARGET_TRIPLE: ${{ matrix.target }}
         run: bash packaging/scripts/copy-backend-to-resources.sh
 
+      - name: Repair Linux sidecar shared libs for AppImage
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          set -euxo pipefail
+          INTERNAL_DIR="src-tauri/resources/hermes-server/_internal"
+          if [ ! -d "$INTERNAL_DIR" ]; then
+            echo "No sidecar _internal dir found at $INTERNAL_DIR; skipping repair"
+            exit 0
+          fi
+
+          # Some Python wheels expect hashed libwebp SONAMEs (e.g. libwebp-<hash>.so.7.2.0)
+          # that are not always present in the bundled sidecar. Create local symlinks when missing.
+          SYS_LIBWEBP=$(ldconfig -p | awk '/libwebp\.so\.7/{print $4; exit}')
+          if [ -z "$SYS_LIBWEBP" ]; then
+            echo "System libwebp.so.7 not found in ldconfig; skipping libwebp repair"
+            exit 0
+          fi
+
+          mapfile -t MISSING_WEBP_DEPS < <(
+            find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -111 \) -print0 \
+              | xargs -0 -r -n1 sh -c 'patchelf --print-needed "$1" 2>/dev/null || true' _ \
+              | grep -E '^libwebp-[[:alnum:]_-]+\.so(\.[0-9]+)*$' \
+              | sort -u \
+              | while read -r dep; do
+                  [ -e "$INTERNAL_DIR/$dep" ] || echo "$dep"
+                done
+          )
+
+          if [ "${#MISSING_WEBP_DEPS[@]}" -eq 0 ]; then
+            echo "No missing hashed libwebp dependencies detected"
+            exit 0
+          fi
+
+          for dep in "${MISSING_WEBP_DEPS[@]}"; do
+            ln -sf "$SYS_LIBWEBP" "$INTERNAL_DIR/$dep"
+            echo "Linked $INTERNAL_DIR/$dep -> $SYS_LIBWEBP"
+          done
+
       # ── Node.js 20 ────────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
         with:
