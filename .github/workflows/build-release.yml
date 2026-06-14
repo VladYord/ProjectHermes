@@ -158,7 +158,8 @@ jobs:
           fi
 
           # Some Python wheels expect hashed libwebp SONAMEs (e.g. libwebp-<hash>.so.7.2.0)
-          # that are not always present in the bundled sidecar. Create local symlinks when missing.
+          # that are not always present in the bundled sidecar.
+          # Copy concrete files (not symlinks) so linuxdeploy can always resolve them.
           print_needed() {
             if command -v patchelf >/dev/null 2>&1; then
               patchelf --print-needed "$1" 2>/dev/null || true
@@ -192,12 +193,24 @@ jobs:
             esac
 
             if [ -n "$SYS_LIB" ]; then
-              ln -sf "$SYS_LIB" "$INTERNAL_DIR/$dep"
-              echo "Linked $INTERNAL_DIR/$dep -> $SYS_LIB"
+              cp -fL "$SYS_LIB" "$INTERNAL_DIR/$dep"
+              chmod 0644 "$INTERNAL_DIR/$dep"
+              echo "Copied provider for $dep from $SYS_LIB"
             else
               echo "WARNING: no system provider found for $dep"
             fi
           done
+
+          # Hard fallback for the exact SONAME observed in CI logs.
+          # Keep this until upstream wheel naming is stable.
+          if [ ! -e "$INTERNAL_DIR/libwebp-67ee3789.so.7.2.0" ]; then
+            SYS_LIBWEBP=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}')
+            if [ -n "$SYS_LIBWEBP" ]; then
+              cp -fL "$SYS_LIBWEBP" "$INTERNAL_DIR/libwebp-67ee3789.so.7.2.0"
+              chmod 0644 "$INTERNAL_DIR/libwebp-67ee3789.so.7.2.0"
+              echo "Copied hard fallback libwebp-67ee3789.so.7.2.0 from $SYS_LIBWEBP"
+            fi
+          fi
 
       # ── Node.js 20 ────────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
