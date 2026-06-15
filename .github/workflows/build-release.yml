@@ -157,66 +157,62 @@ jobs:
             exit 0
           fi
 
-          # Some Python wheels expect hashed libwebp SONAMEs (e.g. libwebp-<hash>.so.7.2.0)
-          # that are not always present in the bundled sidecar.
-          # Copy concrete files (not symlinks) so linuxdeploy can always resolve them.
-          print_needed() {
-            if command -v patchelf >/dev/null 2>&1; then
-              patchelf --print-needed "$1" 2>/dev/null || true
-            elif command -v readelf >/dev/null 2>&1; then
-              readelf -d "$1" 2>/dev/null | awk '/NEEDED/{gsub(/\[|\]/,"",$5); print $5}' || true
-            fi
-          }
+          # patchelf is also installed later in "Install WebKit2GTK (Linux)",
+          # but that step runs after this one, so ensure it's available now.
+          command -v patchelf >/dev/null || (sudo apt-get update -y && sudo apt-get install -y --no-install-recommends patchelf)
 
-          mapfile -t MISSING_WEBP_DEPS < <(
-            while IFS= read -r -d '' f; do
-              print_needed "$f"
-            done < <(find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -111 \) -print0) \
-              | grep -E '^lib(webp|webpmux|webpdemux|sharpyuv)[^/]*-[[:alnum:]_-]+\.so(\.[0-9]+)*$' \
-              | sort -u \
-              | while read -r dep; do
-                  [ -e "$INTERNAL_DIR/$dep" ] || echo "$dep"
-                done
-          )
+          # PyInstaller/auditwheel sometimes bundle Pillow's _webp extension with
+          # hashed NEEDED entries (e.g. libsharpyuv-0bacc318.so.0.1.2,
+          # libwebp-67ee3789.so.7.2.0) that don't correspond to any real file,
+          # either in _internal or anywhere linuxdeploy looks. Rather than try to
+          # manufacture files with those exact hashed names, rewrite the ELF
+          # NEEDED entries to point at the real system SONAMEs (provided by
+          # libwebp-dev, already installed and bundled by linuxdeploy).
 
-          if [ "${#MISSING_WEBP_DEPS[@]}" -eq 0 ]; then
-            echo "No missing hashed libwebp dependencies detected"
-            exit 0
-          fi
+          WEBP_REAL=$(ldconfig -p | awk '/libwebp\.so\.[0-9]+ /{print $1; exit}')
+          WEBPMUX_REAL=$(ldconfig -p | awk '/libwebpmux\.so\.[0-9]+ /{print $1; exit}')
+          WEBPDEMUX_REAL=$(ldconfig -p | awk '/libwebpdemux\.so\.[0-9]+ /{print $1; exit}')
+          SHARPYUV_REAL=$(ldconfig -p | awk '/libsharpyuv\.so\.[0-9]+ /{print $1; exit}')
 
-          for dep in "${MISSING_WEBP_DEPS[@]}"; do
-            case "$dep" in
-              libwebpdemux-*.so*) SYS_LIB=$(ldconfig -p | awk '/libwebpdemux\.so\./{print $4; exit}') ;;
-              libwebpmux-*.so*)   SYS_LIB=$(ldconfig -p | awk '/libwebpmux\.so\./{print $4; exit}') ;;
-              libwebp-*.so*)      SYS_LIB=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}') ;;
-              libsharpyuv-*.so*)  SYS_LIB=$(ldconfig -p | awk '/libsharpyuv\.so\./{print $4; exit}') ;;
-              *)                  SYS_LIB="" ;;
-            esac
+          echo "Real SONAMEs on this runner:"
+          echo "  libwebp:      ${WEBP_REAL:-<not found>}"
+          echo "  libwebpmux:   ${WEBPMUX_REAL:-<not found>}"
+          echo "  libwebpdemux: ${WEBPDEMUX_REAL:-<not found>}"
+          echo "  libsharpyuv:  ${SHARPYUV_REAL:-<not found>}"
 
-            if [ -n "$SYS_LIB" ]; then
-              cp -fL "$SYS_LIB" "$INTERNAL_DIR/$dep"
-              chmod 0644 "$INTERNAL_DIR/$dep"
-              echo "Copied provider for $dep from $SYS_LIB"
-            else
-              echo "WARNING: no system provider found for $dep"
-            fi
-          done
-
-          # Hard fallback SONAMEs observed in CI logs.
-          for fallback in libwebp-67ee3789.so.7.2.0 libsharpyuv-0bacc318.so.0.1.2; do
-            if [ ! -e "$INTERNAL_DIR/$fallback" ]; then
-              case "$fallback" in
-                libwebp-*) SYS_FALLBACK=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}') ;;
-                libsharpyuv-*) SYS_FALLBACK=$(ldconfig -p | awk '/libsharpyuv\.so\./{print $4; exit}') ;;
-                *) SYS_FALLBACK="" ;;
+          find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -111 \) -print0 |
+          while IFS= read -r -d '' f; do
+            patchelf --print-needed "$f" 2>/dev/null | while read -r dep; do
+              case "$dep" in
+                libsharpyuv-*.so*)
+                  [ -n "$SHARPYUV_REAL" ] && [ "$dep" != "$SHARPYUV_REAL" ] && {
+                    echo "Patching $f: $dep -> $SHARPYUV_REAL"
+                    patchelf --replace-needed "$dep" "$SHARPYUV_REAL" "$f"
+                  }
+                  ;;
+                libwebpdemux-*.so*)
+                  [ -n "$WEBPDEMUX_REAL" ] && [ "$dep" != "$WEBPDEMUX_REAL" ] && {
+                    echo "Patching $f: $dep -> $WEBPDEMUX_REAL"
+                    patchelf --replace-needed "$dep" "$WEBPDEMUX_REAL" "$f"
+                  }
+                  ;;
+                libwebpmux-*.so*)
+                  [ -n "$WEBPMUX_REAL" ] && [ "$dep" != "$WEBPMUX_REAL" ] && {
+                    echo "Patching $f: $dep -> $WEBPMUX_REAL"
+                    patchelf --replace-needed "$dep" "$WEBPMUX_REAL" "$f"
+                  }
+                  ;;
+                libwebp-*.so*)
+                  [ -n "$WEBP_REAL" ] && [ "$dep" != "$WEBP_REAL" ] && {
+                    echo "Patching $f: $dep -> $WEBP_REAL"
+                    patchelf --replace-needed "$dep" "$WEBP_REAL" "$f"
+                  }
+                  ;;
               esac
-              if [ -n "$SYS_FALLBACK" ]; then
-                cp -fL "$SYS_FALLBACK" "$INTERNAL_DIR/$fallback"
-                chmod 0644 "$INTERNAL_DIR/$fallback"
-                echo "Copied hard fallback $fallback from $SYS_FALLBACK"
-              fi
-            fi
+            done
           done
+
+          echo "Repair complete."
 
       # ── Node.js 20 ────────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
@@ -323,29 +319,9 @@ jobs:
           fi
 
           # linuxdeploy resolves NEEDED entries via host linker paths while scanning AppDir.
-          # Mirror hashed SONAMEs required by sidecar binaries into host linker path.
-          INTERNAL_DIR="src-tauri/resources/hermes-server/_internal"
-          if [ -d "$INTERNAL_DIR" ]; then
-            while IFS= read -r dep; do
-              case "$dep" in
-                libwebpdemux-*.so*) SYS_LIB=$(ldconfig -p | awk '/libwebpdemux\.so\./{print $4; exit}') ;;
-                libwebpmux-*.so*)   SYS_LIB=$(ldconfig -p | awk '/libwebpmux\.so\./{print $4; exit}') ;;
-                libwebp-*.so*)      SYS_LIB=$(ldconfig -p | awk '/libwebp\.so\./{print $4; exit}') ;;
-                libsharpyuv-*.so*)  SYS_LIB=$(ldconfig -p | awk '/libsharpyuv\.so\./{print $4; exit}') ;;
-                *)                  SYS_LIB="" ;;
-              esac
-              if [ -n "$SYS_LIB" ]; then
-                sudo ln -sf "$SYS_LIB" "/usr/lib/x86_64-linux-gnu/$dep"
-                echo "Linked host compatibility SONAME $dep -> $SYS_LIB"
-              fi
-            done < <(
-              find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -111 \) -print0 \
-                | xargs -0 -r -n1 sh -c 'patchelf --print-needed "$1" 2>/dev/null || true' _ \
-                | grep -E '^lib(webp|webpmux|webpdemux|sharpyuv)[^/]*-[[:alnum:]_-]+\.so(\.[0-9]+)*$' \
-                | sort -u
-            )
-            sudo ldconfig
-          fi
+          # (Hashed sidecar SONAMEs were already rewritten to real system SONAMEs
+          # in the "Repair Linux sidecar shared libs" step above via patchelf
+          # --replace-needed, so no extra symlinking is needed here.)
 
           # Verify pkg-config can find required dev packages.
           pkg-config --cflags --libs gtk+-3.0 || (echo "GTK3 dev headers not found" && exit 1)
