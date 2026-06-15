@@ -151,11 +151,12 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           set -euxo pipefail
-          INTERNAL_DIR="src-tauri/resources/hermes-server/_internal"
-          if [ ! -d "$INTERNAL_DIR" ]; then
-            echo "No sidecar _internal dir found at $INTERNAL_DIR; skipping repair"
+          RESOURCES_DIR="src-tauri/resources/hermes-server"
+          if [ ! -d "$RESOURCES_DIR" ]; then
+            echo "No sidecar resources dir found at $RESOURCES_DIR; skipping repair"
             exit 0
           fi
+          INTERNAL_DIR="$RESOURCES_DIR"
 
           # patchelf is also installed later in "Install WebKit2GTK (Linux)",
           # but that step runs after this one, so ensure it's available now.
@@ -180,9 +181,15 @@ jobs:
           echo "  libwebpdemux: ${WEBPDEMUX_REAL:-<not found>}"
           echo "  libsharpyuv:  ${SHARPYUV_REAL:-<not found>}"
 
-          find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' \) -print0 |
-            while IFS= read -r -d '' f; do
-              patchelf --print-needed "$f" 2>/dev/null | while read -r dep; do
+          find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -111 \) -print0 |
+          while IFS= read -r -d '' f; do
+            # -perm -111 also matches shell scripts and other non-ELF executables;
+            # patchelf exits 1 on those, so skip anything that isn't ELF.
+            if [ "$(head -c4 "$f" | head -c1)" != $'\x7f' ] || [ "$(head -c4 "$f" | tail -c3)" != "ELF" ]; then
+              continue
+            fi
+
+            patchelf --print-needed "$f" 2>/dev/null | while read -r dep; do
               case "$dep" in
                 libsharpyuv-*.so*)
                   [ -n "$SHARPYUV_REAL" ] && [ "$dep" != "$SHARPYUV_REAL" ] && {
@@ -209,10 +216,24 @@ jobs:
                   }
                   ;;
               esac
-            done
+            done || true
           done
 
           echo "Repair complete."
+
+          # Verify: scan _internal again for ANY remaining hashed webp/sharpyuv
+          # NEEDED entries, across ALL files (not just the four we know about).
+          # This catches cases where the dependency lives in a file/pattern we
+          # didn't anticipate (e.g. nested PIL/.libs, a different hash, etc.)
+          echo "=== Verification: scanning $INTERNAL_DIR for remaining hashed webp/sharpyuv deps ==="
+          find "$INTERNAL_DIR" -type f -print0 |
+          while IFS= read -r -d '' f; do
+            if [ "$(head -c4 "$f" | head -c1)" = $'\x7f' ] && [ "$(head -c4 "$f" | tail -c3)" = "ELF" ]; then
+              patchelf --print-needed "$f" 2>/dev/null | grep -E '^lib(webp|webpmux|webpdemux|sharpyuv)[^/]*-[0-9a-f]{6,}\.so' \
+                && echo "  ^ found in: $f" || true
+            fi
+          done
+          echo "=== Verification complete ==="
 
       # ── Node.js 20 ────────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
