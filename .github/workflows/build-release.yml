@@ -279,7 +279,7 @@ jobs:
             libxkbcommon0 \
             libstdc++6 \
             libglib2.0-0 \
-            libsharpyuv0
+            ibsharpyuv-dev
 
           # OpenGL runtime package naming can differ by distro image.
           if apt-cache show libgl1-mesa-glx >/dev/null 2>&1; then
