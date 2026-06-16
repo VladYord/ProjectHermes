@@ -29,8 +29,8 @@ jobs:
             target: x86_64-unknown-linux-gnu
             # Newline-separated globs — upload-artifact supports multiple patterns
             artifact_glob: |
-              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
               src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
 
     runs-on: ${{ matrix.platform }}
     env:
@@ -147,94 +147,6 @@ jobs:
           TARGET_TRIPLE: ${{ matrix.target }}
         run: bash packaging/scripts/copy-backend-to-resources.sh
 
-      - name: Repair Linux sidecar shared libs for AppImage
-        if: matrix.platform == 'ubuntu-22.04'
-        run: |
-          set -euxo pipefail
-          RESOURCES_DIR="src-tauri/resources/hermes-server"
-          if [ ! -d "$RESOURCES_DIR" ]; then
-            echo "No sidecar resources dir found at $RESOURCES_DIR; skipping repair"
-            exit 0
-          fi
-          INTERNAL_DIR="$RESOURCES_DIR"
-
-          # patchelf is also installed later in "Install WebKit2GTK (Linux)",
-          # but that step runs after this one, so ensure it's available now.
-          command -v patchelf >/dev/null || (sudo apt-get update -y && sudo apt-get install -y --no-install-recommends patchelf)
-
-          # PyInstaller/auditwheel sometimes bundle Pillow's _webp extension with
-          # hashed NEEDED entries (e.g. libsharpyuv-0bacc318.so.0.1.2,
-          # libwebp-67ee3789.so.7.2.0) that don't correspond to any real file,
-          # either in _internal or anywhere linuxdeploy looks. Rather than try to
-          # manufacture files with those exact hashed names, rewrite the ELF
-          # NEEDED entries to point at the real system SONAMEs (provided by
-          # libwebp-dev, already installed and bundled by linuxdeploy).
-
-          WEBP_REAL=$(ldconfig -p | awk '/libwebp\.so\.[0-9]+ /{print $1; exit}')
-          WEBPMUX_REAL=$(ldconfig -p | awk '/libwebpmux\.so\.[0-9]+ /{print $1; exit}')
-          WEBPDEMUX_REAL=$(ldconfig -p | awk '/libwebpdemux\.so\.[0-9]+ /{print $1; exit}')
-          SHARPYUV_REAL=$(ldconfig -p | awk '/libsharpyuv\.so\.[0-9]+ /{print $1; exit}')
-
-          echo "Real SONAMEs on this runner:"
-          echo "  libwebp:      ${WEBP_REAL:-<not found>}"
-          echo "  libwebpmux:   ${WEBPMUX_REAL:-<not found>}"
-          echo "  libwebpdemux: ${WEBPDEMUX_REAL:-<not found>}"
-          echo "  libsharpyuv:  ${SHARPYUV_REAL:-<not found>}"
-
-          find "$INTERNAL_DIR" -type f \( -name '*.so' -o -name '*.so.*' -o -perm -111 \) -print0 |
-          while IFS= read -r -d '' f; do
-            # -perm -111 also matches shell scripts and other non-ELF executables;
-            # patchelf exits 1 on those, so skip anything that isn't ELF.
-            if [ "$(head -c4 "$f" | head -c1)" != $'\x7f' ] || [ "$(head -c4 "$f" | tail -c3)" != "ELF" ]; then
-              continue
-            fi
-
-            patchelf --print-needed "$f" 2>/dev/null | while read -r dep; do
-              case "$dep" in
-                libsharpyuv-*.so*)
-                  [ -n "$SHARPYUV_REAL" ] && [ "$dep" != "$SHARPYUV_REAL" ] && {
-                    echo "Patching $f: $dep -> $SHARPYUV_REAL"
-                    patchelf --replace-needed "$dep" "$SHARPYUV_REAL" "$f"
-                  }
-                  ;;
-                libwebpdemux-*.so*)
-                  [ -n "$WEBPDEMUX_REAL" ] && [ "$dep" != "$WEBPDEMUX_REAL" ] && {
-                    echo "Patching $f: $dep -> $WEBPDEMUX_REAL"
-                    patchelf --replace-needed "$dep" "$WEBPDEMUX_REAL" "$f"
-                  }
-                  ;;
-                libwebpmux-*.so*)
-                  [ -n "$WEBPMUX_REAL" ] && [ "$dep" != "$WEBPMUX_REAL" ] && {
-                    echo "Patching $f: $dep -> $WEBPMUX_REAL"
-                    patchelf --replace-needed "$dep" "$WEBPMUX_REAL" "$f"
-                  }
-                  ;;
-                libwebp-*.so*)
-                  [ -n "$WEBP_REAL" ] && [ "$dep" != "$WEBP_REAL" ] && {
-                    echo "Patching $f: $dep -> $WEBP_REAL"
-                    patchelf --replace-needed "$dep" "$WEBP_REAL" "$f"
-                  }
-                  ;;
-              esac
-            done || true
-          done
-
-          echo "Repair complete."
-
-          # Verify: scan _internal again for ANY remaining hashed webp/sharpyuv
-          # NEEDED entries, across ALL files (not just the four we know about).
-          # This catches cases where the dependency lives in a file/pattern we
-          # didn't anticipate (e.g. nested PIL/.libs, a different hash, etc.)
-          echo "=== Verification: scanning $INTERNAL_DIR for remaining hashed webp/sharpyuv deps ==="
-          find "$INTERNAL_DIR" -type f -print0 |
-          while IFS= read -r -d '' f; do
-            if [ "$(head -c4 "$f" | head -c1)" = $'\x7f' ] && [ "$(head -c4 "$f" | tail -c3)" = "ELF" ]; then
-              patchelf --print-needed "$f" 2>/dev/null | grep -E '^lib(webp|webpmux|webpdemux|sharpyuv)[^/]*-[0-9a-f]{6,}\.so' \
-                && echo "  ^ found in: $f" || true
-            fi
-          done
-          echo "=== Verification complete ==="
-
       # ── Node.js 20 ────────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
         with:
@@ -258,14 +170,16 @@ jobs:
           workspaces: src-tauri -> target
 
       # ── Linux WebKit2GTK (required by Tauri) ─────────────────────────────
-      - name: Install WebKit2GTK (Linux)
+      - name: Install Linux build dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           set -euxo pipefail
           sudo apt-get update -y
 
           # Canonical Tauri/Linux build dependencies for Ubuntu 22.04.
-          # Keep this list minimal and avoid invalid package names that break apt transactions.
+          # AppImage/linuxdeploy-only packages have been removed since we now
+          # only build .deb and .rpm bundles (no linuxdeploy dependency-deploy
+          # step, so no fragile shared-lib repair needed).
           sudo apt-get install -y --no-install-recommends \
             build-essential \
             curl \
@@ -273,30 +187,14 @@ jobs:
             file \
             ca-certificates \
             pkg-config \
-            patchelf \
             libssl-dev \
             libwebkit2gtk-4.1-dev \
-            libayatana-appindicator3-dev\
+            libayatana-appindicator3-dev \
             libgtk-3-dev \
-            libgtk-3-bin \
             librsvg2-dev \
             libgdk-pixbuf-2.0-dev \
-            libgdk-pixbuf2.0-bin \
-            libglib2.0-bin \
             libxdo-dev \
-            libfuse2 \
-            libzstd1 \
-            libgcrypt20 \
-            squashfs-tools \
-            appstream \
-            desktop-file-utils \
-            shared-mime-info \
-            zsync \
-            libxcb1 \
-            libxkbcommon0 \
-            libstdc++6 \
-            libglib2.0-0 \
-            libwebp-dev
+            rpm
 
           # OpenGL runtime package naming can differ by distro image.
           if apt-cache show libgl1-mesa-glx >/dev/null 2>&1; then
@@ -318,37 +216,9 @@ jobs:
             exit 1
           fi
 
-          # Ubuntu variants may provide either appindicator package name.
-          if apt-cache show libayatana-appindicator3-dev >/dev/null 2>&1; then
-            sudo apt-get install -y --no-install-recommends libayatana-appindicator3-dev
-          elif apt-cache show libappindicator3-dev >/dev/null 2>&1; then
-            sudo apt-get install -y --no-install-recommends libappindicator3-dev
-          else
-            echo "ERROR: neither libayatana-appindicator3-dev nor libappindicator3-dev is available"
-            exit 1
-          fi
-
-          # On Ubuntu 22.04, gdk-pixbuf-query-loaders is installed to an arch-specific
-          # path that is NOT in $PATH. Symlink it so linuxdeploy's GTK plugin can find it.
-          GDK_PIXBUF_QUERY=$(find /usr/lib -name 'gdk-pixbuf-query-loaders' -type f 2>/dev/null | head -n1 || true)
-          if [ -n "$GDK_PIXBUF_QUERY" ]; then
-            sudo ln -sf "$GDK_PIXBUF_QUERY" /usr/local/bin/gdk-pixbuf-query-loaders
-            echo "Symlinked gdk-pixbuf-query-loaders -> $GDK_PIXBUF_QUERY"
-          else
-            echo "ERROR: gdk-pixbuf-query-loaders binary not found anywhere under /usr/lib"
-            exit 1
-          fi
-
-          # linuxdeploy resolves NEEDED entries via host linker paths while scanning AppDir.
-          # (Hashed sidecar SONAMEs were already rewritten to real system SONAMEs
-          # in the "Repair Linux sidecar shared libs" step above via patchelf
-          # --replace-needed, so no extra symlinking is needed here.)
-
           # Verify pkg-config can find required dev packages.
           pkg-config --cflags --libs gtk+-3.0 || (echo "GTK3 dev headers not found" && exit 1)
           pkg-config --cflags --libs webkit2gtk-4.1 || (echo "WebKit2GTK 4.1 dev headers not found" && exit 1)
-          command -v glib-compile-schemas >/dev/null || (echo "glib-compile-schemas not found" && exit 1)
-          command -v gdk-pixbuf-query-loaders >/dev/null || (echo "gdk-pixbuf-query-loaders not in PATH after symlink" && exit 1)
       
       # ── Tauri CLI (pinned version) ─────────────────────────────────────────
 
@@ -357,69 +227,10 @@ jobs:
       # builds the Svelte frontend automatically before the Rust compilation.
       - name: Build Tauri app (Linux)
         if: matrix.platform == 'ubuntu-22.04'
-        env:
-          APPIMAGE_EXTRACT_AND_RUN: 1
-          RUST_LOG: tauri_bundler=trace,tauri_cli=debug,linuxdeploy=trace
-          LD_LIBRARY_PATH: src-tauri/resources/hermes-server/_internal:/usr/lib/x86_64-linux-gnu:/usr/lib:/usr/local/lib:${{ env.LD_LIBRARY_PATH }}
-          QT_QPA_PLATFORM: offscreen
-          LINUXDEPLOY_OUTPUT_VERSION_FILE: 1
         run: |
           rustc --version
           cargo --version
           npx --yes @tauri-apps/cli@${{ env.TAURI_CLI_VERSION }} build --target ${{ matrix.target }} -- --verbose 2>&1
-
-      - name: Diagnose AppImage bundling failure (Linux)
-        if: matrix.platform == 'ubuntu-22.04' && failure()
-        run: |
-          set +e
-          echo "=== PATH tools ==="
-          command -v linuxdeploy || true
-          command -v gdk-pixbuf-query-loaders || true
-          command -v glib-compile-schemas || true
-          command -v appstreamcli || true
-
-          echo "=== AppImage bundle dir tree ==="
-          find src-tauri/target -type d -path "*/bundle/appimage*" -print || true
-          find src-tauri/target -type f \( -iname "*linuxdeploy*" -o -iname "*plugin*gtk*" -o -iname "*plugin*appimage*" \) | sed 's#^#FILE: #' || true
-
-          echo "=== Locate linuxdeploy cache artifacts (project + home cache) ==="
-          find src-tauri/target -type f \( -iname "*linuxdeploy*" -o -iname "*plugin*gtk*" -o -iname "*plugin*gstreamer*" -o -iname "*plugin*appimage*" \) 2>/dev/null | sed 's#^#TARGET_FILE: #' || true
-          find "$HOME" -type f \( -iname "*linuxdeploy*" -o -iname "*plugin*gtk*" -o -iname "*plugin*gstreamer*" -o -iname "*plugin*appimage*" \) 2>/dev/null | sed 's#^#HOME_FILE: #' || true
-
-          echo "=== Inspect linuxdeploy binaries ==="
-          while IFS= read -r f; do
-            echo "--- $f ---"
-            file "$f" || true
-            ls -l "$f" || true
-          done < <(find src-tauri/target "$HOME" -type f -iname "*linuxdeploy*" 2>/dev/null | head -n 40)
-
-          echo "=== Try direct linuxdeploy rerun for stderr ==="
-          APPDIR=$(find src-tauri/target -type d -name "*.AppDir" 2>/dev/null | head -n1)
-          LINUXDEPLOY_BIN=$(find src-tauri/target "$HOME" -type f \( -name "linuxdeploy" -o -name "linuxdeploy-*.AppImage" \) 2>/dev/null | head -n1)
-          GTK_PLUGIN=$(find src-tauri/target "$HOME" -type f -name "*linuxdeploy-plugin-gtk*.sh" 2>/dev/null | head -n1)
-          APPIMAGE_PLUGIN=$(find src-tauri/target "$HOME" -type f -name "*linuxdeploy-plugin-appimage*.AppImage" 2>/dev/null | head -n1)
-
-          echo "APPDIR=$APPDIR"
-          echo "LINUXDEPLOY_BIN=$LINUXDEPLOY_BIN"
-          echo "GTK_PLUGIN=$GTK_PLUGIN"
-          echo "APPIMAGE_PLUGIN=$APPIMAGE_PLUGIN"
-
-          if [ -n "$APPDIR" ] && [ -n "$LINUXDEPLOY_BIN" ]; then
-            chmod +x "$LINUXDEPLOY_BIN" || true
-            [ -n "$GTK_PLUGIN" ] && chmod +x "$GTK_PLUGIN" || true
-            [ -n "$APPIMAGE_PLUGIN" ] && chmod +x "$APPIMAGE_PLUGIN" || true
-
-            if [ -n "$GTK_PLUGIN" ]; then
-              export LINUXDEPLOY_PLUGIN_GTK="$GTK_PLUGIN"
-            fi
-            if [ -n "$APPIMAGE_PLUGIN" ]; then
-              export LINUXDEPLOY_PLUGIN_APPIMAGE="$APPIMAGE_PLUGIN"
-            fi
-
-            "$LINUXDEPLOY_BIN" --appimage-extract-and-run --verbosity 3 --appdir "$APPDIR" --plugin gtk --output appimage || true
-          else
-            echo "Could not rerun linuxdeploy: missing AppDir or linuxdeploy binary"
-          fi
 
       - name: Build Tauri app (Windows/macOS)
         if: matrix.platform != 'ubuntu-22.04'

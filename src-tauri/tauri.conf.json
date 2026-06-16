@@ -27,7 +27,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["deb", "rpm"],
     "useLocalToolsDir": true,
     "publisher": "Hermes Project",
     "icon": [
@@ -58,11 +58,17 @@
           "libwebkit2gtk-4.1",
           "libappindicator3-1",
           "librsvg2-2",
-          "libssl3",
-          "libfuse2"
+          "libssl3"
         ]
       },
-      "appimage": {}
+      "rpm": {
+        "depends": [
+          "webkit2gtk4.1",
+          "libappindicator-gtk3",
+          "librsvg2",
+          "openssl-libs"
+        ]
+      }
     }
   },
   "plugins": {
