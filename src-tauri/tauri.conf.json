@@ -27,7 +27,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "rpm"],
+    "targets": ["deb", "rpm","msi", "nsis", "app", "dmg"],
     "useLocalToolsDir": true,
     "publisher": "Hermes Project",
     "icon": [
